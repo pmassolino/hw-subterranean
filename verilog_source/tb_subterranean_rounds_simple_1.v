@@ -16,7 +16,8 @@ skip_hash_test = 0, // 1 - True, 0 - False
 skip_aead_test = 0, // 1 - True, 0 - False
 test_memory_file_subterranean_hash = "../data_tests/LWC_HASH_KAT_256.txt",
 test_memory_file_subterranean_aead = "../data_tests/LWC_AEAD_KAT_128_128.txt",
-sim_enable_dump = 0 // 1 - True, 0 - False
+sim_enable_dump = 1, // 1 - True, 0 - False
+ASYNC_RSTN = 1  // 0 - Synchronous reset in high, 1 - Asynchrouns reset in low.
 );
 
 reg [(MAXIMUM_BUFFER_SIZE - 1):0] test_input_key_enc;
@@ -36,19 +37,16 @@ reg [(MAXIMUM_BUFFER_SIZE - 1):0] test_output_tag_dec;
 reg [(MAXIMUM_BUFFER_SIZE - 1):0] true_output_pt_dec;
 
 reg test_arstn;
-reg test_enable;
 reg test_init;
-reg test_encrypt;
-reg test_decrypt;
+reg [1:0] test_oper;
 reg [31:0] test_din;
 reg test_din_valid;
 wire test_din_ready;
 reg [2:0] test_din_size;
 wire [31:0] test_dout;
+wire [2:0] test_dout_size;
 wire test_dout_valid;
 reg test_dout_ready;
-wire test_free;
-wire test_finish;
 
 reg clk;
 reg test_error = 1'b0;
@@ -62,19 +60,16 @@ test
 (
     .clk(clk),
     .arstn(test_arstn),
-    .enable(test_enable),
     .init(test_init),
-    .encrypt(test_encrypt),
-    .decrypt(test_decrypt),
+    .oper(test_oper),
     .din(test_din),
     .din_size(test_din_size),
     .din_valid(test_din_valid),
     .din_ready(test_din_ready),
     .dout(test_dout),
+    .dout_size(test_dout_size),
     .dout_valid(test_dout_valid),
-    .dout_ready(test_dout_ready),
-    .free(test_free),
-    .finish(test_finish)
+    .dout_ready(test_dout_ready)
 );
 
 initial begin : clock_generator
@@ -88,16 +83,14 @@ end
 task test_init_state;
     begin
         test_init <= 1'b1;
-        test_encrypt <= 1'b0;
-        test_decrypt <= 1'b0;
+        test_oper <= 2'b00;
         test_din <= 32'b0;
         test_din_size <= 3'b000;
         test_din_valid <= 1'b0;
         test_dout_ready <= 1'b0;
         #PERIOD;
         test_init <= 1'b0;
-        test_encrypt <= 1'b0;
-        test_decrypt <= 1'b0;
+        test_oper <= 2'b00;
         test_din <= 32'b0;
         test_din_size <= 3'b000;
         test_din_valid <= 1'b0;
@@ -112,8 +105,7 @@ task test_absorb_unkeyed;
     integer temp_i;
     begin
         test_init <= 1'b0;
-        test_encrypt <= 1'b0;
-        test_decrypt <= 1'b0;
+        test_oper <= 2'b00;
         test_din <= 32'b0;
         test_din_size <= 3'b000;
         test_din_valid <= 1'b0;
@@ -125,24 +117,22 @@ task test_absorb_unkeyed;
             test_din_size <= 3'b001;
             #(PERIOD);
             test_din_valid <= 1'b1;
-            test_dout_ready <= 1'b1;
+            while(test_din_ready == 1'b0) begin
+                #(PERIOD);
+            end
             #(PERIOD);
             test_din_valid <= 1'b0;
             test_dout_ready <= 1'b0;
-            while(test_free != 1'b1) begin
-                #(PERIOD);
-            end
             test_din <= 32'b0;
             test_din_size <= 3'b000;
             #(PERIOD);
             test_din_valid <= 1'b1;
-            test_dout_ready <= 1'b1;
-            #(PERIOD);
-            test_din_valid <= 1'b0;
-            test_dout_ready <= 1'b0;
-            while(test_free != 1'b1) begin
+            test_din_valid <= 1'b1;
+            while(test_din_ready == 1'b0) begin
                 #(PERIOD);
             end
+            #(PERIOD);
+            test_din_valid <= 1'b0;
             temp_i = temp_i + 1;
         end
         #(PERIOD);
@@ -150,24 +140,21 @@ task test_absorb_unkeyed;
         test_din_size <= 3'b000;
         #(PERIOD);
         test_din_valid <= 1'b1;
-        test_dout_ready <= 1'b1;
+        while(test_din_ready == 1'b0) begin
+            #(PERIOD);
+        end
         #(PERIOD);
         test_din_valid <= 1'b0;
         test_dout_ready <= 1'b0;
-        while(test_free != 1'b1) begin
-            #(PERIOD);
-        end
         test_din <= 32'b0;
         test_din_size <= 3'b000;
         #(PERIOD);
         test_din_valid <= 1'b1;
-        test_dout_ready <= 1'b1;
-        #(PERIOD);
-        test_din_valid <= 1'b0;
-        test_dout_ready <= 1'b0;
-        while(test_free != 1'b1) begin
+        while(test_din_ready == 1'b0) begin
             #(PERIOD);
         end
+        #(PERIOD);
+        test_din_valid <= 1'b0;
         #(PERIOD);
     end
 endtask
@@ -180,8 +167,7 @@ task test_absorb_keyed;
     integer last_block;
     begin
         test_init <= 1'b0;
-        test_encrypt <= 1'b0;
-        test_decrypt <= 1'b0;
+        test_oper <= 2'b00;
         test_din_valid <= 1'b0;
         test_dout_ready <= 1'b0;
         test_din <= 32'b0;
@@ -194,13 +180,11 @@ task test_absorb_keyed;
                 test_din_size <= 3'b100;
                 #(PERIOD);
                 test_din_valid <= 1'b1;
-                test_dout_ready <= 1'b1;
-                #(PERIOD);
-                test_din_valid <= 1'b0;
-                test_dout_ready <= 1'b0;
-                while(test_free != 1'b1) begin
+                while(test_din_ready == 1'b0) begin
                     #(PERIOD);
                 end
+                #(PERIOD);
+                test_din_valid <= 1'b0;
                 iterator_buffer = iterator_buffer + 32;
             end
         end
@@ -210,13 +194,11 @@ task test_absorb_keyed;
             test_din_size <= 3'b000;
             #(PERIOD);
             test_din_valid <= 1'b1;
-            test_dout_ready <= 1'b1;
-            #(PERIOD);
-            test_din_valid <= 1'b0;
-            test_dout_ready <= 1'b0;
-            while(test_free != 1'b1) begin
+            while(test_din_ready == 1'b0) begin
                 #(PERIOD);
             end
+            #(PERIOD);
+            test_din_valid <= 1'b0;
         end else begin
             iterator_din = 0;
             while(iterator_din < last_block) begin
@@ -231,13 +213,11 @@ task test_absorb_keyed;
             test_din_size <= last_block/8;
             #(PERIOD);
             test_din_valid <= 1'b1;
-            test_dout_ready <= 1'b1;
-            #(PERIOD);
-            test_din_valid <= 1'b0;
-            test_dout_ready <= 1'b0;
-            while(test_free != 1'b1) begin
+            while(test_din_ready == 1'b0) begin
                 #(PERIOD);
             end
+            #(PERIOD);
+            test_din_valid <= 1'b0;
         end
     end
 endtask
@@ -252,8 +232,7 @@ task test_absorb_encrypt;
     integer last_block;
     begin
         test_init <= 1'b0;
-        test_encrypt <= 1'b1;
-        test_decrypt <= 1'b0;
+        test_oper <= 2'b10;
         test_din_valid <= 1'b0;
         test_dout_ready <= 1'b0;
         test_din <= 32'b0;
@@ -267,16 +246,20 @@ task test_absorb_encrypt;
                 test_din <= buffer_in[iterator_buffer_in +: 32];
                 test_din_size <= 3'b100;
                 #(PERIOD);
-                buffer_out[iterator_buffer_out +: 32] <= test_dout;
-                #(PERIOD);
                 test_din_valid <= 1'b1;
+                while(test_din_ready == 1'b0) begin
+                    #(PERIOD);
+                end
+                #(PERIOD);
+                test_din_valid <= 1'b0;
                 test_dout_ready <= 1'b1;
+                while(test_dout_valid == 1'b0) begin
+                    #(PERIOD);
+                end
+                buffer_out[iterator_buffer_out +:32] <= test_dout;
                 #(PERIOD);
                 test_din_valid <= 1'b0;
                 test_dout_ready <= 1'b0;
-                while(test_free != 1'b1) begin
-                    #(PERIOD);
-                end
                 iterator_buffer_in = iterator_buffer_in + 32;
                 iterator_buffer_out = iterator_buffer_out + 32;
             end
@@ -287,13 +270,12 @@ task test_absorb_encrypt;
             test_din_size <= 3'b000;
             #(PERIOD);
             test_din_valid <= 1'b1;
-            test_dout_ready <= 1'b1;
+            while(test_din_ready == 1'b0) begin
+                #(PERIOD);
+            end
             #(PERIOD);
             test_din_valid <= 1'b0;
             test_dout_ready <= 1'b0;
-            while(test_free != 1'b1) begin
-                #(PERIOD);
-            end
         end else begin
             iterator_din = 0;
             while(iterator_din < last_block) begin
@@ -307,6 +289,16 @@ task test_absorb_encrypt;
             end
             test_din_size <= last_block/8;
             #(PERIOD);
+            test_din_valid <= 1'b1;
+            while(test_din_ready == 1'b0) begin
+                #(PERIOD);
+            end
+            #(PERIOD);
+            test_din_valid <= 1'b0;
+            test_dout_ready <= 1'b1;
+            while(test_dout_valid == 1'b0) begin
+                #(PERIOD);
+            end
             iterator_din = 0;
             while(iterator_din < last_block) begin
                 buffer_out[iterator_buffer_out +:8] <= test_dout[iterator_din +:8];
@@ -314,16 +306,10 @@ task test_absorb_encrypt;
                 iterator_din = iterator_din + 8;
             end
             #(PERIOD);
-            test_din_valid <= 1'b1;
-            test_dout_ready <= 1'b1;
-            #(PERIOD);
             test_din_valid <= 1'b0;
             test_dout_ready <= 1'b0;
-            while(test_free != 1'b1) begin
-                #(PERIOD);
-            end
         end
-        test_encrypt <= 1'b0;
+        test_oper <= 2'b00;
         #(PERIOD);
     end
 endtask
@@ -338,8 +324,7 @@ task test_absorb_decrypt;
     integer last_block;
     begin
         test_init <= 1'b0;
-        test_encrypt <= 1'b0;
-        test_decrypt <= 1'b1;
+        test_oper <= 2'b11;
         test_din_valid <= 1'b0;
         test_dout_ready <= 1'b0;
         test_din <= 32'b0;
@@ -353,16 +338,20 @@ task test_absorb_decrypt;
                 test_din <= buffer_in[iterator_buffer_in +: 32];
                 test_din_size <= 3'b100;
                 #(PERIOD);
-                buffer_out[iterator_buffer_out +: 32] <= test_dout;
-                #(PERIOD);
                 test_din_valid <= 1'b1;
+                while(test_din_ready == 1'b0) begin
+                    #(PERIOD);
+                end
+                #(PERIOD);
+                test_din_valid <= 1'b0;
                 test_dout_ready <= 1'b1;
+                while(test_dout_valid == 1'b0) begin
+                    #(PERIOD);
+                end
+                buffer_out[iterator_buffer_out +:32] <= test_dout;
                 #(PERIOD);
                 test_din_valid <= 1'b0;
                 test_dout_ready <= 1'b0;
-                while(test_free != 1'b1) begin
-                    #(PERIOD);
-                end
                 iterator_buffer_in = iterator_buffer_in + 32;
                 iterator_buffer_out = iterator_buffer_out + 32;
             end
@@ -373,13 +362,12 @@ task test_absorb_decrypt;
             test_din_size <= 3'b000;
             #(PERIOD);
             test_din_valid <= 1'b1;
-            test_dout_ready <= 1'b1;
+            while(test_din_ready == 1'b0) begin
+                #(PERIOD);
+            end
             #(PERIOD);
             test_din_valid <= 1'b0;
             test_dout_ready <= 1'b0;
-            while(test_free != 1'b1) begin
-                #(PERIOD);
-            end
         end else begin
             iterator_din = 0;
             while(iterator_din < last_block) begin
@@ -393,6 +381,16 @@ task test_absorb_decrypt;
             end
             test_din_size <= last_block/8;
             #(PERIOD);
+            test_din_valid <= 1'b1;
+            while(test_din_ready == 1'b0) begin
+                #(PERIOD);
+            end
+            #(PERIOD);
+            test_din_valid <= 1'b0;
+            test_dout_ready <= 1'b1;
+            while(test_dout_valid == 1'b0) begin
+                #(PERIOD);
+            end
             iterator_din = 0;
             while(iterator_din < last_block) begin
                 buffer_out[iterator_buffer_out +:8] <= test_dout[iterator_din +:8];
@@ -400,16 +398,10 @@ task test_absorb_decrypt;
                 iterator_din = iterator_din + 8;
             end
             #(PERIOD);
-            test_din_valid <= 1'b1;
-            test_dout_ready <= 1'b1;
-            #(PERIOD);
             test_din_valid <= 1'b0;
             test_dout_ready <= 1'b0;
-            while(test_free != 1'b1) begin
-                #(PERIOD);
-            end
         end
-        test_decrypt <= 1'b0;
+        test_oper <= 2'b00;
         #(PERIOD);
     end
 endtask
@@ -422,8 +414,7 @@ task test_squeeze;
     integer last_block;
     begin
         test_init <= 1'b0;
-        test_encrypt <= 1'b0;
-        test_decrypt <= 1'b0;
+        test_oper <= 2'b01;
         test_din_valid <= 1'b0;
         test_dout_ready <= 1'b0;
         test_din <= 32'b0;
@@ -436,16 +427,20 @@ task test_squeeze;
             test_din_size <= 3'b000;
             #(PERIOD);
             while(iterator_buffer_out <= 8*(buffer_size - 4)) begin
-                buffer_out[iterator_buffer_out +: 32] <= test_dout;
-                #(PERIOD);
                 test_din_valid <= 1'b1;
+                while(test_din_ready == 1'b0) begin
+                    #(PERIOD);
+                end
+                #(PERIOD);
+                test_din_valid <= 1'b0;
                 test_dout_ready <= 1'b1;
+                while(test_dout_valid == 1'b0) begin
+                    #(PERIOD);
+                end
+                buffer_out[iterator_buffer_out +:32] <= test_dout;
                 #(PERIOD);
                 test_din_valid <= 1'b0;
                 test_dout_ready <= 1'b0;
-                while(test_free != 1'b1) begin
-                    #(PERIOD);
-                end
                 iterator_buffer_out = iterator_buffer_out + 32;
             end
         end
@@ -456,20 +451,24 @@ task test_squeeze;
             test_din <= 32'b0;
             test_din_size <= 3'b000;
             #(PERIOD);
+            test_din_valid <= 1'b1;
+            while(test_din_ready == 1'b0) begin
+                #(PERIOD);
+            end
+            #(PERIOD);
+            test_din_valid <= 1'b0;
+            test_dout_ready <= 1'b1;
+            while(test_dout_valid == 1'b0) begin
+                #(PERIOD);
+            end
             while(iterator_dout < last_block) begin
                 buffer_out[iterator_buffer_out +: 8] <= test_dout[iterator_dout +: 8];
                 iterator_buffer_out = iterator_buffer_out + 8;
                 iterator_dout = iterator_dout + 8;
             end
             #(PERIOD);
-            test_din_valid <= 1'b1;
-            test_dout_ready <= 1'b1;
-            #(PERIOD);
             test_din_valid <= 1'b0;
             test_dout_ready <= 1'b0;
-            while(test_free != 1'b1) begin
-                #(PERIOD);
-            end
         end
     end
 endtask
@@ -478,8 +477,7 @@ task test_blank;
     integer temp_i;
     begin
         test_init <= 1'b0;
-        test_encrypt <= 1'b0;
-        test_decrypt <= 1'b0;
+        test_oper <= 2'b00;
         test_din_valid <= 1'b0;
         test_dout_ready <= 1'b0;
         test_din <= 32'b0;
@@ -491,17 +489,14 @@ task test_blank;
         #PERIOD;
         while(temp_i < 8) begin
             test_din_valid <= 1'b1;
-            test_dout_ready <= 1'b1;
-            #(PERIOD);
-            test_din_valid <= 1'b0;
-            test_dout_ready <= 1'b0;
-            while(test_free != 1'b1) begin
+            while(test_din_ready == 1'b0) begin
                 #(PERIOD);
             end
+            #(PERIOD);
+            test_din_valid <= 1'b0;
             temp_i = temp_i + 1;
         end
         test_din_valid <= 1'b0;
-        test_dout_ready <= 1'b0;
         #(PERIOD);
     end
 endtask
@@ -561,9 +556,13 @@ integer tag_size;
 integer status_ram_file;
 integer test_iterator;
 initial begin
-    test_arstn <= 1'b0;
-    test_enable <= 1'b0;
+    if(ASYNC_RSTN == 0) begin
+        test_arstn <= 1'b1;
+    end else begin
+        test_arstn <= 1'b0;
+    end
     test_init <= 1'b0;
+    test_oper <= 2'b00;
     test_din_valid <= 1'b0;
     test_dout_ready <= 1'b0;
     test_din <= 32'b0;
@@ -586,8 +585,11 @@ initial begin
     true_output_pt_dec   <= {MAXIMUM_BUFFER_SIZE{1'b0}};
     tag_size <= 16;
     #(PERIOD*2);
-    test_arstn <= 1'b1;
-    test_enable <= 1'b1;
+    if(ASYNC_RSTN == 0) begin
+        test_arstn <= 1'b0;
+    end else begin
+        test_arstn <= 1'b1;
+    end
     #(PERIOD);
     #(tb_delay);
     if(skip_hash_test == 0) begin
@@ -596,6 +598,7 @@ initial begin
         while(!$feof(hash_file)) begin
             read_until_get_character(hash_file, "=");
             status_ram_file = $fscanf(hash_file, "%d", count);
+            $display("Test number : %d", count);
             #(PERIOD);
             test_error <= 1'b0;
             test_verification <= 1'b0;
@@ -637,9 +640,6 @@ initial begin
                 end
                 true_output_ct_enc[255:0] = {true_output_ct_enc[7:0], true_output_ct_enc[255:8]};
             end
-            while(test_free == 1'b0) begin
-                #PERIOD;
-            end
             // Start hash procedure
             test_init_state();
             #(PERIOD);
@@ -674,6 +674,7 @@ initial begin
         while(!$feof(aead_file)) begin
             read_until_get_character(aead_file, "=");
             status_ram_file = $fscanf(aead_file, "%d", count);
+            $display("Test number : %d", count);
             #(PERIOD);
             test_error <= 1'b0;
             test_verification <= 1'b0;
@@ -795,9 +796,6 @@ initial begin
             test_input_nonce_dec = test_input_nonce_enc;
             test_input_ad_dec = test_input_ad_enc;
             test_input_ct_dec = true_output_ct_enc[255:0];
-            while(test_free == 1'b0) begin
-                #PERIOD;
-            end
             // Start the encryption procedure
             // Initialize the state
             test_init_state();

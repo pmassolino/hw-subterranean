@@ -67,10 +67,8 @@ reg [31:0] reg_s_axi_rdata;
 reg [1:0] reg_s_axi_rresp;
 reg reg_s_axi_rvalid;
 
-reg cipher_enable;
 reg cipher_init;
-reg cipher_encrypt;
-reg cipher_decrypt;
+reg [1:0] cipher_oper;
 wire [31:0] cipher_din;
 wire [2:0] cipher_din_size;
 reg cipher_din_valid;
@@ -78,11 +76,6 @@ wire cipher_din_ready;
 wire [31:0] cipher_dout;
 wire cipher_dout_valid;
 reg cipher_dout_ready;
-wire cipher_free;
-wire cipher_finish;
-
-reg [31:0] reg_cipher_dout;
-
 
 assign s_axi_awready = reg_s_axi_awready;
 
@@ -294,7 +287,7 @@ always @(posedge aclk or negedge aresetn) begin
     end else begin
         if (reg_s_axi_arvalid == 1'b1) begin
             if (reg_s_axi_araddr[7:5] == 3'b101) begin
-                reg_s_axi_rdata <= reg_cipher_dout;
+                reg_s_axi_rdata <= cipher_dout;
             end else begin
                 reg_s_axi_rdata <= 32'b0;
             end
@@ -326,14 +319,6 @@ always @(posedge aclk or negedge aresetn) begin
     end
 end
 
-always @(*) begin
-    if((reg_s_axi_awaddr_is_good == 1'b1) && (reg_s_axi_awvalid == 1'b1) && (reg_s_axi_wvalid == 1'b1)) begin
-        cipher_enable <= 1'b1;
-    end else begin
-        cipher_enable <= 1'b0;
-    end
-end
-
 
 always @(*) begin
     if((reg_s_axi_awaddr_is_good == 1'b1) && (reg_s_axi_awvalid == 1'b1) && (reg_s_axi_wvalid == 1'b1) && (reg_s_axi_awaddr[7:5] == 3'b000)) begin
@@ -344,7 +329,7 @@ always @(*) begin
 end
 
 always @(*) begin
-    if((reg_s_axi_awaddr_is_good == 1'b1) && (reg_s_axi_awvalid == 1'b1) && (reg_s_axi_wvalid == 1'b1)) begin
+    if((reg_s_axi_awaddr_is_good == 1'b1) && (reg_s_axi_awvalid == 1'b1) && (reg_s_axi_wvalid == 1'b1)&& (reg_s_axi_awaddr[7:5] != 3'b000)) begin
         cipher_din_valid <= 1'b1;
         cipher_dout_ready <= 1'b1;
     end else begin
@@ -354,19 +339,26 @@ always @(*) begin
 end
 
 always @(*) begin
-    if((reg_s_axi_awaddr[7:5] == 3'b010)) begin
-        cipher_encrypt <= 1'b1;
-    end else begin
-        cipher_encrypt <= 1'b0;
-    end
-end
-
-always @(*) begin
-    if((reg_s_axi_awaddr[7:5] == 3'b011)) begin
-        cipher_decrypt <= 1'b1;
-    end else begin
-        cipher_decrypt <= 1'b0;
-    end
+    case(reg_s_axi_awaddr[7:5])
+        3'b001 : begin // Duplex Simple
+            cipher_oper <= 2'b00;
+        end
+        3'b010 : begin // Duplex Encrypt
+            cipher_oper <= 2'b10;
+        end
+        3'b011 : begin // Duplex Decrypt
+            cipher_oper <= 2'b11;
+        end
+        3'b100 : begin // Duplex Squeeze
+            cipher_oper <= 2'b01;
+        end
+        3'b101 : begin // Read buffer
+            cipher_oper <= 2'b00;
+        end
+        default: begin // Don't care
+            cipher_oper <= 2'b00;
+        end
+    endcase
 end
 
 assign cipher_din = reg_s_axi_wdata;
@@ -376,25 +368,15 @@ subterranean_rounds_simple_1
 cipher (
     .clk(aclk),
     .arstn(aresetn),
-    .enable(cipher_enable),
     .init(cipher_init),
-    .encrypt(cipher_encrypt),
-    .decrypt(cipher_decrypt),
+    .oper(cipher_oper),
     .din(cipher_din),
     .din_valid(cipher_din_valid),
     .din_ready(cipher_din_ready),
     .din_size(cipher_din_size),
     .dout(cipher_dout),
     .dout_valid(cipher_dout_valid),
-    .dout_ready(cipher_dout_ready),
-    .free(cipher_free),
-    .finish(cipher_finish)
+    .dout_ready(cipher_dout_ready)
 );
-
-always @(posedge aclk) begin
-    if (cipher_din_valid == 1'b1) begin
-        reg_cipher_dout <= cipher_dout;
-    end
-end
 
 endmodule

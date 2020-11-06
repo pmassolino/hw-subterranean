@@ -15,15 +15,13 @@ module subterranean_stream_state_machine
     input wire arstn,
     // Data in bus
     input wire din_last,
-    input wire din_valid_and_ready,
+    input wire int_din_valid_and_ready,
     output wire reg_buffer_rst,
     output wire [1:0] reg_buffer_oper,
-    output wire reg_buffer_din_enable,
-    output wire reg_buffer_dout_enable,
+    output wire reg_buffer_din_oper,
     input wire is_reg_buffer_size_equal_zero,
     input wire is_reg_buffer_size_equal_one,
     input wire is_reg_buffer_size_equal_four,
-    output wire sm_din_ready,
     input wire reg_buffer_last,
     input wire is_reg_ctr_data_equal_one,
     output wire [2:0] reg_ctr_data_oper,
@@ -33,34 +31,28 @@ module subterranean_stream_state_machine
     output wire inst_ready,
     input wire [3:0] reg_inst,
     // Permutation core
-    output wire p_core_din_valid,
-    output wire p_core_enable,
     output wire p_core_init,
-    output wire p_core_encrypt_decrypt_enable,
-    output wire [1:0] p_core_din_oper,
+    output wire [1:0] sm_p_core_oper,
+    output wire [2:0] p_core_din_oper,
     // Tag compare register
     output wire reg_compare_tag_rst,
     output wire reg_compare_tag_enable,
     // Dout
     input wire dout_valid_and_ready,
-    output wire [1:0] reg_dout_oper
+    output wire [2:0] reg_dout_oper
 );
 
 reg reg_reg_buffer_rst, next_reg_buffer_rst;
 reg [1:0] reg_reg_buffer_oper, next_reg_buffer_oper;
-reg reg_reg_buffer_din_enable, next_reg_buffer_din_enable;
-reg reg_reg_buffer_dout_enable, next_reg_buffer_dout_enable;
-reg reg_sm_din_ready, next_sm_din_ready;
+reg reg_reg_buffer_din_oper, next_reg_buffer_din_oper;
 reg [2:0] reg_reg_ctr_data_oper, next_reg_ctr_data_oper;
 reg reg_inst_ready, next_inst_ready;
-reg reg_p_core_din_valid, next_p_core_din_valid;
-reg reg_p_core_enable, next_p_core_enable;
 reg reg_p_core_init, next_p_core_init;
-reg reg_p_core_encrypt_decrypt_enable, next_p_core_encrypt_decrypt_enable;
-reg [1:0] reg_p_core_din_oper, next_p_core_din_oper;
+reg [1:0] reg_sm_p_core_oper, next_sm_p_core_oper;
+reg [2:0] reg_p_core_din_oper, next_p_core_din_oper;
 reg reg_reg_compare_tag_rst, next_reg_compare_tag_rst;
 reg reg_reg_compare_tag_enable, next_reg_compare_tag_enable;
-reg [1:0] reg_reg_dout_oper, next_reg_dout_oper;
+reg [2:0] reg_reg_dout_oper, next_reg_dout_oper;
 
 
 localparam s_reset = 8'h00, s_idle = 8'h01,
@@ -79,32 +71,24 @@ generate
                 actual_state <= s_reset;
                 reg_reg_buffer_rst <= 1'b1;
                 reg_reg_buffer_oper <= 2'b00;
-                reg_reg_buffer_din_enable <= 1'b0;
-                reg_reg_buffer_dout_enable <= 1'b0;
-                reg_sm_din_ready <= 1'b0;
+                reg_reg_buffer_din_oper <= 1'b0;
                 reg_reg_ctr_data_oper <= 3'b000;
                 reg_inst_ready <= 1'b0;
-                reg_p_core_enable <= 1'b0;
                 reg_p_core_init <= 1'b1;
-                reg_p_core_encrypt_decrypt_enable <= 1'b0;
-                reg_p_core_din_valid <= 1'b0;
-                reg_p_core_din_oper <= 2'b00;
+                reg_sm_p_core_oper <= 2'b00;
+                reg_p_core_din_oper <= 3'b000;
                 reg_reg_compare_tag_rst <= 1'b0;
                 reg_reg_compare_tag_enable <= 1'b0;
-                reg_reg_dout_oper <= 2'b00;
+                reg_reg_dout_oper <= 3'b000;
             end else begin
                 actual_state <= next_state;
                 reg_reg_buffer_rst <= next_reg_buffer_rst;
                 reg_reg_buffer_oper <= next_reg_buffer_oper;
-                reg_reg_buffer_din_enable <= next_reg_buffer_din_enable;
-                reg_reg_buffer_dout_enable <= next_reg_buffer_dout_enable;
-                reg_sm_din_ready <= next_sm_din_ready;
+                reg_reg_buffer_din_oper <= next_reg_buffer_din_oper;
                 reg_reg_ctr_data_oper <= next_reg_ctr_data_oper;
                 reg_inst_ready <= next_inst_ready;
-                reg_p_core_enable <= next_p_core_enable;
                 reg_p_core_init <= next_p_core_init;
-                reg_p_core_encrypt_decrypt_enable <= next_p_core_encrypt_decrypt_enable;
-                reg_p_core_din_valid <= next_p_core_din_valid;
+                reg_sm_p_core_oper <= next_sm_p_core_oper;
                 reg_p_core_din_oper <= next_p_core_din_oper;
                 reg_reg_compare_tag_rst <= next_reg_compare_tag_rst;
                 reg_reg_compare_tag_enable <= next_reg_compare_tag_enable;
@@ -117,33 +101,24 @@ generate
                 actual_state <= s_reset;
                 reg_reg_buffer_rst <= 1'b1;
                 reg_reg_buffer_oper <= 2'b00;
-                reg_reg_buffer_din_enable <= 1'b0;
-                reg_reg_buffer_dout_enable <= 1'b0;
-                reg_sm_din_ready <= 1'b0;
+                reg_reg_buffer_din_oper <= 1'b0;
                 reg_reg_ctr_data_oper <= 3'b000;
                 reg_inst_ready <= 1'b0;
-                reg_p_core_enable <= 1'b0;
                 reg_p_core_init <= 1'b1;
-                reg_p_core_encrypt_decrypt_enable <= 1'b0;
-                reg_p_core_din_valid <= 1'b0;
-                reg_p_core_din_oper <= 2'b00;
+                reg_sm_p_core_oper <= 2'b00;
+                reg_p_core_din_oper <= 3'b000;
                 reg_reg_compare_tag_rst <= 1'b0;
                 reg_reg_compare_tag_enable <= 1'b0;
-                reg_reg_dout_oper <= 2'b00;
+                reg_reg_dout_oper <= 3'b000;
             end else begin
                 actual_state <= next_state;
                 reg_reg_buffer_rst <= next_reg_buffer_rst;
                 reg_reg_buffer_oper <= next_reg_buffer_oper;
-                reg_reg_buffer_din_enable <= next_reg_buffer_din_enable;
-                reg_reg_buffer_dout_enable <= next_reg_buffer_dout_enable;
-                reg_sm_din_ready <= next_sm_din_ready;
+                reg_reg_buffer_din_oper <= next_reg_buffer_din_oper;
                 reg_reg_ctr_data_oper <= next_reg_ctr_data_oper;
                 reg_inst_ready <= next_inst_ready;
-                reg_p_core_din_valid <= next_p_core_din_valid;
-                reg_p_core_enable <= next_p_core_enable;
                 reg_p_core_init <= next_p_core_init;
-                reg_p_core_encrypt_decrypt_enable <= next_p_core_encrypt_decrypt_enable;
-                reg_p_core_din_valid <= next_p_core_din_valid;
+                reg_sm_p_core_oper <= next_sm_p_core_oper;
                 reg_p_core_din_oper <= next_p_core_din_oper;
                 reg_reg_compare_tag_rst <= next_reg_compare_tag_rst;
                 reg_reg_compare_tag_enable <= next_reg_compare_tag_enable;
@@ -157,19 +132,15 @@ endgenerate
 always @(*) begin
     next_reg_buffer_rst = 1'b0;
     next_reg_buffer_oper = 2'b00;
-    next_reg_buffer_din_enable = 1'b0;
-    next_reg_buffer_dout_enable = 1'b0;
-    next_sm_din_ready = 1'b0;
+    next_reg_buffer_din_oper = 1'b0;
     next_reg_ctr_data_oper = 3'b000;
     next_inst_ready = 1'b0;
-    next_p_core_enable = 1'b0;
     next_p_core_init = 1'b0;
-    next_p_core_encrypt_decrypt_enable = 1'b0;
-    next_p_core_din_valid = 1'b0;
-    next_p_core_din_oper = 2'b00;
+    next_sm_p_core_oper = 2'b00;
+    next_p_core_din_oper = 3'b000;
     next_reg_compare_tag_rst = 1'b0;
     next_reg_compare_tag_enable = 1'b0;
-    next_reg_dout_oper = 2'b00;
+    next_reg_dout_oper = 3'b000;
     case(next_state)
         s_reset : begin
             next_reg_buffer_rst = 1'b1;
@@ -181,253 +152,193 @@ always @(*) begin
         end
         // Store din in buffer and initialize the state
         s_hash_0 : begin
-            next_p_core_enable = 1'b1;
             next_p_core_init = 1'b1;
-            next_sm_din_ready = 1'b1;
+            next_p_core_din_oper = 3'b011;
             next_reg_buffer_oper = 2'b10;
-            next_reg_buffer_din_enable = 1'b1;
-            next_reg_buffer_dout_enable = 1'b1;
+            next_reg_buffer_din_oper = 1'b1;
         end
         // Absorb 1 byte din buffer - Special case for the empty hash string.
         s_hash_1 : begin
             next_reg_buffer_oper = 2'b01;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b01;
-            next_reg_buffer_dout_enable = 1'b1;
+            next_p_core_din_oper = 3'b010;
         end
         // Absorb 1 byte din buffer
         s_hash_2 : begin
             next_reg_buffer_oper = 2'b01;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b01;
-            next_reg_buffer_dout_enable = 1'b1;
+            next_p_core_din_oper = 3'b010;
         end
         // Absorb null - (din buffer not empty)
         s_hash_3 : begin
             next_reg_buffer_oper = 2'b10;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
         end
         // Absorb null - (din buffer empty)
         s_hash_4 : begin
-            next_sm_din_ready = 1'b1;
             next_reg_buffer_oper = 2'b10;
-            next_reg_buffer_din_enable = 1'b1;
-            next_reg_buffer_dout_enable = 1'b1;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_reg_buffer_din_oper = 1'b1;
+            next_p_core_din_oper = 3'b001;
         end
         // Store din in buffer
         s_hash_5 : begin
-            next_sm_din_ready = 1'b1;
-            next_p_core_enable = 1'b1;
             next_reg_buffer_oper = 2'b10;
-            next_reg_buffer_din_enable = 1'b1;
-            next_reg_buffer_dout_enable = 1'b1;
+            next_reg_buffer_din_oper = 1'b1;
+            next_p_core_din_oper = 3'b011;
         end
         // Absorb null last
         s_hash_6 : begin
             next_reg_buffer_oper = 2'b10;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
         end
         // Absorb second null last
         s_hash_7 : begin
             next_reg_buffer_oper = 2'b10;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
         end
         // Initialize the counter and perform 1 blank permutation
         s_hash_8 : begin
             next_reg_ctr_data_oper = 3'b001;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
         end
         // Perform all 6 blank permutations
         s_hash_9 : begin
             next_reg_ctr_data_oper = 3'b100;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
         end
         // Perform last blank permutation and initialize counter to generate hash
         s_hash_10 : begin
             next_reg_ctr_data_oper = 3'b010;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
         end
         // Perform all hash steps
         s_hash_11 : begin
             next_reg_ctr_data_oper = 3'b101;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
-            next_reg_dout_oper = 2'b10;
+            next_p_core_din_oper = 3'b001;
+            next_sm_p_core_oper = 2'b01;
+            next_reg_dout_oper = 3'b010;
         end
         // Stream key mode
         s_key_0 : begin
-            next_p_core_enable = 1'b1;
             next_reg_buffer_oper = 2'b11;
-            next_reg_buffer_din_enable = 1'b1;
-            next_reg_buffer_dout_enable = 1'b1;
+            next_reg_buffer_din_oper = 1'b1;
+            next_p_core_din_oper = 3'b011;
         end
         // Last key processed
         s_key_1 : begin
-            next_sm_din_ready = 1'b0;
             next_reg_buffer_rst = 1'b1;
-            next_p_core_enable = 1'b1;
-            next_reg_buffer_dout_enable = 1'b1;
+            next_p_core_din_oper = 3'b011;
         end
         // Add null data
         s_key_2 : begin
-            next_sm_din_ready = 1'b0;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
         end
         // Stream nonce
         s_enc_dec_0 : begin
-            next_p_core_enable = 1'b1;
             next_reg_buffer_oper = 2'b11;
-            next_reg_buffer_din_enable = 1'b1;
-            next_reg_buffer_dout_enable = 1'b1;
+            next_reg_buffer_din_oper = 1'b1;
+            next_p_core_din_oper = 3'b011;
         end
         // Last nonce processed
         s_enc_dec_1 : begin
-            next_sm_din_ready = 1'b0;
             next_reg_buffer_rst = 1'b1;
-            next_p_core_enable = 1'b1;
-            next_reg_buffer_dout_enable = 1'b1;
+            next_p_core_din_oper = 3'b011;
         end
         // Add null data
         s_enc_dec_2 : begin
-            next_sm_din_ready = 1'b0;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
         end
         // Initialize the counter and perform 1 blank permutation
         s_enc_dec_3 : begin
             next_reg_ctr_data_oper = 3'b001;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
         end
         // Perform all 6 blank permutations
         s_enc_dec_4 : begin
             next_reg_ctr_data_oper = 3'b100;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
         end
         // Perform last blank permutation
         s_enc_dec_5 : begin
             next_reg_buffer_rst = 1'b1;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
         end
         // Stream associated data mode
         s_enc_dec_6 : begin
             next_reg_buffer_oper = 2'b11;
-            next_reg_buffer_din_enable = 1'b1;
-            next_reg_buffer_dout_enable = 1'b1;
-            next_p_core_enable = 1'b1;
+            next_reg_buffer_din_oper = 1'b1;
+            next_p_core_din_oper = 3'b011;
         end
         // Last associated data processed
         s_enc_dec_7 : begin
-            next_sm_din_ready = 1'b0;
-            next_reg_buffer_dout_enable = 1'b1;
             next_reg_buffer_rst = 1'b1;
-            next_p_core_enable = 1'b1;
+            next_p_core_din_oper = 3'b011;
         end
         // Add null data
         s_enc_dec_8 : begin
-            next_sm_din_ready = 1'b0;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
         end
         // Stream plaintext/ciphertext mode
         s_enc_dec_9 : begin
             next_reg_buffer_oper = 2'b11;
-            next_reg_buffer_din_enable = 1'b1;
-            next_reg_buffer_dout_enable = 1'b1;
-            next_reg_dout_oper = 2'b01;
-            next_p_core_enable = 1'b1;
-            next_p_core_encrypt_decrypt_enable = 1'b1;
+            next_reg_buffer_din_oper = 1'b1;
+            next_reg_dout_oper = 3'b001;
+            next_p_core_din_oper = 3'b011;
+            next_sm_p_core_oper = 2'b10;
         end
         // Last plaintext/ciphertext processed
         s_enc_dec_10 : begin
-            next_sm_din_ready = 1'b0;
-            next_reg_dout_oper = 2'b01;
-            next_reg_buffer_dout_enable = 1'b1;
-            next_p_core_enable = 1'b1;
-            next_p_core_encrypt_decrypt_enable = 1'b1;
+            next_reg_buffer_oper = 2'b11;
+            next_reg_dout_oper = 3'b001;
+            next_p_core_din_oper = 3'b011;
+            next_sm_p_core_oper = 2'b10;
         end
         // Add null data
         s_enc_dec_11 : begin
-            next_sm_din_ready = 1'b0;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
+            next_reg_dout_oper = 3'b001;
         end
         // Initialize the counter and perform 1 blank permutation
         s_enc_dec_12 : begin
             next_reg_ctr_data_oper = 3'b001;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
+            next_reg_dout_oper = 3'b001;
         end
         // Perform all 6 blank permutations
         s_enc_dec_13 : begin
             next_reg_ctr_data_oper = 3'b100;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
         end
         // Perform last blank permutation and prepare counter for tag
         s_enc_14 : begin
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
             next_reg_buffer_rst = 1'b1;
             next_reg_ctr_data_oper = 3'b011;
         end
         // Send all tag blocks
         s_enc_15 : begin
             next_reg_ctr_data_oper = 3'b101;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
-            next_reg_dout_oper = 2'b10;
+            next_p_core_din_oper = 3'b001;
+            next_sm_p_core_oper = 2'b01;
+            next_reg_dout_oper = 3'b010;
         end
         // Perform last blank permutation and prepare to receive the tag
         s_dec_13 : begin
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b10;
-            next_p_core_din_valid = 1'b1;
+            next_p_core_din_oper = 3'b001;
             next_reg_buffer_rst = 1'b1;
             next_reg_compare_tag_rst = 1'b1;
         end
         // Receive tag
         s_dec_14 : begin
             next_reg_buffer_oper = 2'b11;
-            next_reg_buffer_din_enable = 1'b1;
-            next_reg_buffer_dout_enable = 1'b1;
-            next_p_core_enable = 1'b1;
-            next_p_core_din_oper = 2'b11;
+            next_reg_buffer_din_oper = 1'b1;
+            next_p_core_din_oper = 3'b100;
             next_reg_compare_tag_enable = 1'b1;
+            next_sm_p_core_oper = 2'b01;
+            next_reg_dout_oper = 3'b100;
         end
         // Send tag status
         s_dec_15 : begin
-            next_reg_dout_oper = 2'b11;
+            next_p_core_din_oper = 3'b011;
+            next_reg_dout_oper = 3'b011;
         end
         default : begin
             ;
@@ -462,7 +373,7 @@ always @(*) begin
         end
         // Store din in buffer and initialize state
         s_hash_0 : begin
-            if(din_valid_and_ready == 1'b1) begin
+            if(int_din_valid_and_ready == 1'b1) begin
                 next_state = s_hash_1;
             end else begin
                 next_state = s_hash_0;
@@ -500,7 +411,7 @@ always @(*) begin
         end
         // Absorb null - (din buffer empty)
         s_hash_4 : begin
-            if(din_valid_and_ready == 1'b1) begin
+            if(int_din_valid_and_ready == 1'b1) begin
                 next_state = s_hash_2;
             end else begin
                 next_state = s_hash_5;
@@ -508,7 +419,7 @@ always @(*) begin
         end
         // Store din in buffer
         s_hash_5 : begin
-            if(din_valid_and_ready == 1'b1) begin
+            if(int_din_valid_and_ready == 1'b1) begin
                 next_state = s_hash_2;
             end else begin
                 next_state = s_hash_5;
@@ -548,7 +459,7 @@ always @(*) begin
         end
         // Stream key mode
         s_key_0 : begin
-            if((din_last == 1'b1) && (din_valid_and_ready == 1'b1)) begin
+            if((din_last == 1'b1) && (int_din_valid_and_ready == 1'b1)) begin
                 next_state = s_key_1;
             end else begin
                 next_state = s_key_0;
@@ -568,7 +479,7 @@ always @(*) begin
         end
         // Stream nonce mode
         s_enc_dec_0 : begin
-            if((din_last == 1'b1) && (din_valid_and_ready == 1'b1)) begin
+            if((din_last == 1'b1) && (int_din_valid_and_ready == 1'b1)) begin
                 next_state = s_enc_dec_1;
             end else begin
                 next_state = s_enc_dec_0;
@@ -604,7 +515,7 @@ always @(*) begin
         end
         // Stream associated data mode
         s_enc_dec_6 : begin
-            if((din_last == 1'b1) && (din_valid_and_ready == 1'b1)) begin
+            if((din_last == 1'b1) && (int_din_valid_and_ready == 1'b1)) begin
                 next_state = s_enc_dec_7;
             end else begin
                 next_state = s_enc_dec_6;
@@ -624,7 +535,7 @@ always @(*) begin
         end
         // Stream plaintext/ciphertext mode
         s_enc_dec_9 : begin
-            if((din_last == 1'b1) && (din_valid_and_ready == 1'b1)) begin
+            if((din_last == 1'b1) && (int_din_valid_and_ready == 1'b1)) begin
                 next_state = s_enc_dec_10;
             end else begin
                 next_state = s_enc_dec_9;
@@ -632,14 +543,10 @@ always @(*) begin
         end
         // Last plaintext/ciphertext processed
         s_enc_dec_10 : begin
-            if((dout_valid_and_ready == 1'b1) || (is_reg_buffer_size_equal_zero == 1'b1)) begin
-                if((is_reg_buffer_size_equal_four == 1'b1) || (is_reg_buffer_size_equal_zero == 1'b1)) begin
-                    next_state = s_enc_dec_11;
-                end else begin
-                    next_state = s_enc_dec_12;
-                end
+            if((is_reg_buffer_size_equal_four == 1'b1) || (is_reg_buffer_size_equal_zero == 1'b1)) begin
+                next_state = s_enc_dec_11;
             end else begin
-                next_state = s_enc_dec_10;
+                next_state = s_enc_dec_12;
             end
         end
         // Add null data
@@ -680,7 +587,7 @@ always @(*) begin
         end
         // Receive tag
         s_dec_14 : begin
-            if((din_last == 1'b1) && (din_valid_and_ready == 1'b1)) begin
+            if((din_last == 1'b1) && (int_din_valid_and_ready == 1'b1)) begin
                 next_state = s_dec_15;
             end else begin
                 next_state = s_dec_14;
@@ -698,16 +605,12 @@ end
 
 assign reg_buffer_rst = reg_reg_buffer_rst;
 assign reg_buffer_oper = reg_reg_buffer_oper;
-assign reg_buffer_din_enable = reg_reg_buffer_din_enable;
-assign reg_buffer_dout_enable = reg_reg_buffer_dout_enable;
-assign sm_din_ready = reg_sm_din_ready;
+assign reg_buffer_din_oper = reg_reg_buffer_din_oper;
 assign reg_ctr_data_oper = reg_reg_ctr_data_oper;
 assign inst_ready = reg_inst_ready;
-assign p_core_enable = reg_p_core_enable;
 assign p_core_init = reg_p_core_init;
-assign p_core_encrypt_decrypt_enable = reg_p_core_encrypt_decrypt_enable;
+assign sm_p_core_oper = reg_sm_p_core_oper;
 assign p_core_din_oper = reg_p_core_din_oper;
-assign p_core_din_valid = reg_p_core_din_valid;
 assign reg_compare_tag_rst = reg_reg_compare_tag_rst;
 assign reg_compare_tag_enable = reg_reg_compare_tag_enable;
 assign reg_dout_oper = reg_reg_dout_oper;

@@ -19,7 +19,7 @@
 #endif
 #endif
 
-#define MAX_SIMULATION_TICKS 10000000
+#define MAX_SIMULATION_TICKS 100000000
 
 #define G_MAXIMUM_BUFFER_SIZE_ARRAY 2048
 #define G_MAXIMUM_MESSAGE_SIZE_HASH 1024
@@ -37,7 +37,7 @@
 #define G_SKIP_HASH_TEST 0 // 1 - True, 0 - False
 #define G_SKIP_AEAD_TEST 0 // 1 - True, 0 - False
 #define ASYNC_RST 1
-#define SKIPPING_TESTS_MAX 10
+#define SKIPPING_TESTS_MAX 20
 
 class Testbench {
     public:
@@ -108,12 +108,9 @@ class Testbench {
             dut->din_size = 0;
             dut->din_last = 0;
             dut->din_valid = 0;
-            dut->din_enable = 0;
             dut->inst = 0;
             dut->inst_valid = 0;
-            dut->inst_enable = 0;
             dut->dout_ready = 0;
-            dut->dout_enable = 0;
             
             for(i = 0; i < 10; i++){
                 clock_tick();
@@ -389,27 +386,17 @@ class Testbench {
         void dut_hash(char * message_in, int message_in_length_bytes, char * hash_out, int *hash_out_length_bytes){
             int temp_header, temp_status, temp_instruction;
             // Hash instruction
-            dut->din_enable = 1;
-            dut->inst_enable = 1;
-            dut->dout_enable = 1;
             clock_tick();
             temp_instruction = 0x8;
             send_instruction(temp_instruction);
             send_array(message_in, message_in_length_bytes);
             receive_array(hash_out, 64);
             clock_tick();
-            dut->din_enable = 0;
-            dut->inst_enable = 0;
-            dut->dout_enable = 0;
-            clock_tick();
         }
         
         
         void dut_aead_enc(char * key_in, int key_in_length_bytes, char * nonce_in, int nonce_in_length_bytes, char * associated_data_in, int associated_data_in_length_bytes, char * plaintext_in, int plaintext_in_length_bytes, char * ciphertext_out, int ciphertext_out_length_bytes){
             int temp_header, temp_status, temp_instruction;
-            dut->din_enable = 1;
-            dut->inst_enable = 1;
-            dut->dout_enable = 1;
             clock_tick();
             
             // Activate key instruction
@@ -434,17 +421,10 @@ class Testbench {
             receive_array(&ciphertext_out[plaintext_in_length_bytes], ciphertext_out_length_bytes-plaintext_in_length_bytes);
             clock_tick();
             
-            dut->din_enable = 0;
-            dut->inst_enable = 0;
-            dut->dout_enable = 0;
-            clock_tick();
         }
         
         void dut_aead_dec(char * key_in, int key_in_length_bytes, char * nonce_in, int nonce_in_length_bytes, char * associated_data_in, int associated_data_in_length_bytes, char * ciphertext_in, int ciphertext_in_length_bytes, char * plaintext_out, int plaintext_out_length_bytes){
             int temp_header, temp_status, temp_instruction;
-            dut->din_enable = 1;
-            dut->inst_enable = 1;
-            dut->dout_enable = 1;
             clock_tick();
             
             // Activate key instruction
@@ -469,10 +449,6 @@ class Testbench {
             send_receive_array(&ciphertext_in[plaintext_out_length_bytes], ciphertext_in_length_bytes-plaintext_out_length_bytes, &plaintext_out[plaintext_out_length_bytes], 1);
             clock_tick();
             
-            dut->din_enable = 0;
-            dut->inst_enable = 0;
-            dut->dout_enable = 0;
-            clock_tick();
         }
 };
 

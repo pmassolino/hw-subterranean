@@ -1,4 +1,4 @@
-#!/usr/bin/python2
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 
 from subterranean_bit import *
@@ -16,7 +16,7 @@ def generate_hash_test(test_file_name = "LWC_HASH_KAT_256_p.txt", number_of_test
     messages = init_buffer(number_of_tests)
     for count in range(number_of_tests+1):
         hash_out = crypto_hash(messages[:count], hash_size_bytes)
-        out_file.write("Count = " + str(count) + '\n')
+        out_file.write("Count = " + str(count+1) + '\n')
         out_file.write("Msg = " + (binascii.hexlify(messages[:count])).upper() + '\n')
         out_file.write("MD = " + (binascii.hexlify(hash_out)).upper() + '\n')
         out_file.write("\n")
@@ -52,7 +52,7 @@ def generate_aead_test(test_file_name = "LWC_AEAD_KAT_128_128_p.txt", number_of_
     associated_datas = init_buffer(number_of_tests_ad)
     nonce = init_buffer(nonce_bytes)
     key = init_buffer(key_bytes)
-    count = 0
+    count = 1
     for i in range(number_of_tests_m+1):
         for j in range(number_of_tests_ad+1):
             ciphertext = crypto_aead_encrypt(messages[:i], associated_datas[:j], None, nonce, key, tag_bytes)

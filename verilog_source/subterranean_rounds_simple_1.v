@@ -14,23 +14,20 @@ module subterranean_rounds_simple_1
 (
     input wire clk,
     input wire arstn,
-    input wire enable,
     input wire init,
-    input wire encrypt,
-    input wire decrypt,
+    input wire [1:0] oper,
     input wire [31:0] din,
     input wire [2:0] din_size,
     input wire din_valid,
     output wire din_ready,
     output wire [31:0] dout,
+    output wire [2:0] dout_size,
     output wire dout_valid,
-    input wire dout_ready,
-    output wire free,
-    output wire finish
+    input wire dout_ready
 );
 
-wire int_din_ready;
-wire int_dout_valid;
+reg int_din_ready;
+reg int_dout_valid;
 
 wire [31:0] temp_din_1;
 wire [31:0] temp_din_1_xor_dout;
@@ -48,61 +45,54 @@ reg [31:0] round_1_dout_mask;
 reg [256:0] reg_state;
 reg [256:0] next_state;
 
-reg reg_finish;
-reg next_finish;
+reg [31:0] reg_dout, next_dout;
+reg [2:0] reg_dout_size, next_dout_size;
 
-wire din_valid_dout_ready;
+wire din_valid_and_ready;
+wire dout_valid_and_ready;
 
-assign int_din_ready = (enable == 1'b1) ? dout_ready : 1'b0;
-
-assign din_valid_dout_ready = din_valid & int_din_ready;
+assign din_valid_and_ready = din_valid & int_din_ready;
+assign dout_valid_and_ready = int_dout_valid & dout_ready;
 
 always @(posedge clk) begin
     reg_state <= next_state;
-end
-
-always @(*) begin
-    if(init == 1'b1) begin
-        next_state = 257'h0;
-    end else if (din_valid_dout_ready == 1'b1) begin
-        next_state = round_1_o;
-    end else begin
-        next_state = reg_state;
-    end
+    reg_dout <= next_dout;
 end
 
 generate
     if (ASYNC_RSTN != 0) begin : use_asynchrnous_reset_zero_enable
         always @(posedge clk or negedge arstn) begin
             if (arstn == 1'b0) begin
-                reg_finish <= 1'b0;
+                reg_dout_size <= 3'b000;
             end else begin
-                reg_finish <= next_finish;
+                reg_dout_size <= next_dout_size;
             end
         end
     end else begin
         always @(posedge clk) begin
             if (arstn == 1'b1) begin
-                reg_finish <= 1'b0;
+                reg_dout_size <= 3'b000;
             end else begin
-                reg_finish <= next_finish;
+                reg_dout_size <= next_dout_size;
             end
         end
     end
 endgenerate
 
 always @(*) begin
-    if(din_valid_dout_ready == 1'b1) begin
-        next_finish = 1'b1;
+    if(init == 1'b1) begin
+        next_state = 257'h0;
+    end else if (din_valid_and_ready == 1'b1) begin
+        next_state = round_1_o;
     end else begin
-        next_finish = 1'b0;
+        next_state = reg_state;
     end
 end
 
 assign temp_din_1 = din[31:0];
 
 always @(*) begin
-    if(((encrypt == 1'b1) || (decrypt == 1'b1)) && (din_size[2] != 1'b1)) begin
+    if(((oper == 2'b10) || (oper == 2'b11)) && (din_size[2] != 1'b1)) begin
         case(din_size[1:0])
             2'b00 : begin
                 round_1_dout_mask = 32'h00000000;
@@ -122,10 +112,10 @@ always @(*) begin
     end
 end
 
-assign temp_din_1_xor_dout = (round_1_dout & round_1_dout_mask) ^ temp_din_1;
+assign temp_din_1_xor_dout = (round_1_dout ^ temp_din_1) & round_1_dout_mask;
 
 always @(*) begin
-    if(decrypt == 1'b1) begin
+    if(oper == 2'b11) begin
         duplex_din_1 = temp_din_1_xor_dout;
     end else begin
         duplex_din_1 = temp_din_1;
@@ -176,12 +166,56 @@ round_1 (
     .dout(round_1_dout)
 );
 
-assign int_dout_valid = (enable == 1'b1) ? din_valid : 1'b0;
+always @(*) begin
+    if(reg_dout_size != 3'b000) begin
+        int_dout_valid = 1'b1;
+    end else begin
+        int_dout_valid = 1'b0;
+    end
+end
 
-assign din_ready = int_din_ready;
-assign dout[31:0]  = temp_din_1_xor_dout;
+always @(*) begin
+    if((reg_dout_size != 3'b000) && (dout_valid_and_ready != 1'b1)) begin
+        int_din_ready = 1'b0;
+    end else begin
+        int_din_ready = 1'b1;
+    end
+end
+
+always @(*) begin
+    if(din_valid_and_ready == 1'b1) begin
+        next_dout = temp_din_1_xor_dout;
+    end else begin
+        next_dout = reg_dout;
+    end
+end
+
+always @(*) begin
+    if(din_valid_and_ready == 1'b1) begin
+        case(oper)
+            // Absorb with output
+            2'b01 : begin
+                next_dout_size = 3'b100;
+            end
+            // Encrypt, Decrypt
+            2'b10, 2'b11 : begin
+                next_dout_size = din_size;
+            end
+            // Absorb no output
+            default : begin
+                next_dout_size = 3'b000;
+            end
+        endcase
+    end else if(dout_valid_and_ready == 1'b1) begin
+        next_dout_size = 3'b000;
+    end else begin
+        next_dout_size = reg_dout_size;
+    end
+end
+
+assign din_ready  = int_din_ready;
+assign dout[31:0] = reg_dout;
 assign dout_valid = int_dout_valid;
-assign free = 1'b1;
-assign finish = reg_finish;
+assign dout_size = reg_dout_size;
 
 endmodule

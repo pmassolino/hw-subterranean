@@ -13,6 +13,7 @@ module subterranean_lwc_buffer_out
 )
 (
     input wire clk,
+    input wire rst,
     // In
     input wire [(G_WIDTH-1):0] din,
     input wire din_last,
@@ -22,11 +23,7 @@ module subterranean_lwc_buffer_out
     output wire [(G_WIDTH-1):0] dout,
     output wire dout_last,
     output wire dout_valid,
-    input wire dout_ready,
-    // Control
-    input wire buffer_in_enable,
-    input wire buffer_out_enable,
-    input wire buffer_rst
+    input wire dout_ready
 );
 
 reg [G_WIDTH:0] reg_data, next_data;
@@ -34,8 +31,6 @@ reg reg_data_empty, next_data_empty;
 
 reg int_din_ready;
 reg int_dout_valid;
-reg [(G_WIDTH-1):0] int_dout;
-reg int_dout_last;
 
 wire din_valid_and_ready;
 wire dout_valid_and_ready;
@@ -49,7 +44,7 @@ always @(posedge clk) begin
 end
 
 always @(*) begin
-    if(buffer_rst == 1'b1) begin
+    if(rst == 1'b1) begin
         next_data = {(G_WIDTH+1){1'b0}};
     end else begin
         if(din_valid_and_ready == 1'b1) begin
@@ -61,7 +56,7 @@ always @(*) begin
 end
 
 always @(*) begin
-    if(buffer_rst == 1'b1) begin
+    if(rst == 1'b1) begin
         next_data_empty = 1'b1;
     end else begin
         if((din_valid_and_ready == 1'b1)) begin
@@ -81,46 +76,28 @@ always @(*) begin
 end
 
 always @(*) begin
-    if(buffer_in_enable == 1'b1) begin
-        if(reg_data_empty == 1'b1) begin
+    if(reg_data_empty == 1'b1) begin
+        int_din_ready = 1'b1;
+    end else begin
+        if(dout_ready == 1'b1) begin
             int_din_ready = 1'b1;
         end else begin
-            if(dout_ready == 1'b1) begin
-                int_din_ready = 1'b1;
-            end else begin
-                int_din_ready = 1'b0;
-            end
+            int_din_ready = 1'b0;
         end
-    end else begin
-        int_din_ready = 1'b0;
     end
 end
 
 always @(*) begin
-    if(buffer_out_enable == 1'b1) begin
-        if(reg_data_empty == 1'b0) begin
-            int_dout_valid = 1'b1;
-        end else begin
-            int_dout_valid = 1'b0;
-        end
+    if(reg_data_empty == 1'b0) begin
+        int_dout_valid = 1'b1;
     end else begin
         int_dout_valid = 1'b0;
     end
 end
 
-always @(*) begin
-    if(buffer_out_enable == 1'b1) begin
-        int_dout = reg_data[G_WIDTH-1:0];
-        int_dout_last = reg_data[G_WIDTH];
-    end else begin
-        int_dout = {G_WIDTH{1'b0}};
-        int_dout_last = 1'b0;
-    end
-end
-
 assign din_ready = int_din_ready;
-assign dout = int_dout; 
-assign dout_last = int_dout_last; 
+assign dout = reg_data[G_WIDTH-1:0]; 
+assign dout_last = reg_data[G_WIDTH];
 assign dout_valid = int_dout_valid;
 
 endmodule

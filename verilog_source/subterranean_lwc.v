@@ -38,63 +38,60 @@ wire pdi_valid_and_ready;
 wire sdi_valid_and_ready;
 
 wire [(G_PWIDTH-1):0] pdi_buffer_din;
-wire pdi_buffer_din_valid;
+reg pdi_buffer_din_valid;
 wire pdi_buffer_din_ready;
 wire [(G_PWIDTH-1):0] pdi_buffer_dout;
 wire pdi_buffer_dout_valid;
 reg  pdi_buffer_dout_ready;
-wire pdi_buffer_in_enable;
-wire pdi_buffer_out_enable;
 wire pdi_buffer_rst;
 reg [2:0] reg_pdi_buffer_dout_size, next_pdi_buffer_dout_size;
 reg reg_pdi_buffer_dout_last, next_pdi_buffer_dout_last;
 
+wire [1:0] pdi_oper;
 wire sm_pdi_ready;
-wire int_pdi_ready;
+reg int_pdi_ready;
 
 wire [(G_PWIDTH-1):0] sdi_buffer_din;
-wire sdi_buffer_din_valid;
+reg sdi_buffer_din_valid;
 wire sdi_buffer_din_ready;
 wire [(G_PWIDTH-1):0] sdi_buffer_dout;
 wire sdi_buffer_dout_valid;
 reg  sdi_buffer_dout_ready;
-wire sdi_buffer_in_enable;
-wire sdi_buffer_out_enable;
 wire sdi_buffer_rst;
 reg [2:0] reg_sdi_buffer_dout_size, next_sdi_buffer_dout_size;
 reg reg_sdi_buffer_dout_last, next_sdi_buffer_dout_last;
 
 wire reg_buffer_dout_size_enable;
 
+wire sdi_oper;
 wire sm_sdi_ready;
-wire int_sdi_ready;
+reg int_sdi_ready;
 
 reg [31:0] temp_data;
 reg [2:0] temp_data_size;
 reg temp_data_last;
 reg temp_valid;
-wire temp_ready;
+reg temp_ready;
 wire sm_temp_ready;
 wire [1:0] temp_data_oper;
 
 wire temp_valid_and_ready;
 
+wire cipher_din_oper;
+
 wire [31:0] cipher_din;
 wire [2:0] cipher_din_size;
 wire cipher_din_last;
-wire cipher_din_valid;
+reg cipher_din_valid;
 wire cipher_din_ready;
-wire cipher_din_enable;
 wire [3:0] cipher_inst;
 reg cipher_inst_valid;
 wire cipher_inst_ready;
-wire cipher_inst_enable;
 wire [31:0] cipher_dout;
 wire [2:0] cipher_dout_size;
 wire cipher_dout_last;
 wire cipher_dout_valid;
-wire cipher_dout_ready;
-wire cipher_dout_enable;
+reg cipher_dout_ready;
 
 reg [(G_SEGMENT_SIZE_BITS-1):0] reg_data_size, next_data_size;
 wire [1:0] reg_data_size_oper;
@@ -107,6 +104,8 @@ wire reg_inst_enable;
 reg reg_segment_end_of_type, next_segment_end_of_type;
 wire reg_segment_end_of_type_enable;
 
+wire do_buffer_din_valid_and_ready;
+
 reg [(G_PWIDTH-1):0] do_buffer_din;
 reg do_buffer_din_last;
 reg do_buffer_din_valid;
@@ -115,19 +114,39 @@ wire [(G_PWIDTH-1):0] do_buffer_dout;
 wire do_buffer_dout_last;
 wire do_buffer_dout_valid;
 wire do_buffer_dout_ready;
-wire do_buffer_in_enable;
-wire do_buffer_out_enable;
 wire do_buffer_rst;
 
 wire [2:0] do_buffer_din_type;
 
+wire do_valid_and_ready;
+
 assign pdi_valid_and_ready = pdi_valid & int_pdi_ready;
 assign sdi_valid_and_ready = sdi_valid & int_sdi_ready;
 
-assign int_pdi_ready = sm_pdi_ready | pdi_buffer_din_ready | cipher_inst_ready;
-
 assign pdi_buffer_din = pdi_data;
-assign pdi_buffer_din_valid = pdi_valid;
+
+always @(*) begin
+    case(pdi_oper)
+        // PDI <-> Cipher instruction
+        2'b01 : begin
+            int_pdi_ready = cipher_inst_ready;
+            cipher_inst_valid = pdi_valid;
+            pdi_buffer_din_valid = 1'b0;
+        end
+        // PDI <-> pdi buffer
+        2'b10 : begin
+            int_pdi_ready = pdi_buffer_din_ready;
+            cipher_inst_valid = 1'b0;
+            pdi_buffer_din_valid = pdi_valid;
+        end
+        // PDI <-> state machine
+        default : begin
+            int_pdi_ready = sm_pdi_ready;
+            cipher_inst_valid = 1'b0;
+            pdi_buffer_din_valid = 1'b0;
+        end
+    endcase
+end
 
 subterranean_lwc_buffer_in
 #(.G_WIDTH(G_PWIDTH)
@@ -135,21 +154,28 @@ subterranean_lwc_buffer_in
 pdi_buffer
 (
     .clk(clk),
+    .rst(pdi_buffer_rst),
     .din(pdi_buffer_din),
     .din_valid(pdi_buffer_din_valid),
     .din_ready(pdi_buffer_din_ready),
     .dout(pdi_buffer_dout),
     .dout_valid(pdi_buffer_dout_valid),
-    .dout_ready(pdi_buffer_dout_ready),
-    .buffer_in_enable(pdi_buffer_in_enable),
-    .buffer_out_enable(pdi_buffer_out_enable),
-    .buffer_rst(pdi_buffer_rst)
+    .dout_ready(pdi_buffer_dout_ready)
 );
 
-assign int_sdi_ready = sm_sdi_ready | sdi_buffer_din_ready;
-
 assign sdi_buffer_din = sdi_data;
-assign sdi_buffer_din_valid = sdi_valid;
+
+always @(*) begin
+    if(sdi_oper == 1'b1) begin
+        // SDI <-> sdi buffer
+        int_sdi_ready = sdi_buffer_din_ready;
+        sdi_buffer_din_valid = sdi_valid;
+    end else begin
+        // SDI <-> state machine
+        int_sdi_ready = sm_sdi_ready;
+        sdi_buffer_din_valid = 1'b0;
+    end
+end
 
 subterranean_lwc_buffer_in
 #(.G_WIDTH(G_SWIDTH)
@@ -157,15 +183,13 @@ subterranean_lwc_buffer_in
 sdi_buffer
 (
     .clk(clk),
+    .rst(sdi_buffer_rst),
     .din(sdi_buffer_din),
     .din_valid(sdi_buffer_din_valid),
     .din_ready(sdi_buffer_din_ready),
     .dout(sdi_buffer_dout),
     .dout_valid(sdi_buffer_dout_valid),
-    .dout_ready(sdi_buffer_dout_ready),
-    .buffer_in_enable(sdi_buffer_in_enable),
-    .buffer_out_enable(sdi_buffer_out_enable),
-    .buffer_rst(sdi_buffer_rst)
+    .dout_ready(sdi_buffer_dout_ready)
 );
 
 always @(posedge clk) begin
@@ -206,8 +230,6 @@ always @(*) begin
 end
 
 assign temp_valid_and_ready = temp_valid & temp_ready;
-
-assign temp_ready = sm_temp_ready | cipher_din_ready;
 
 always @(*) begin
     case(temp_data_oper)
@@ -258,26 +280,27 @@ always @(*) begin
     end
 end
 
+always @(*) begin
+    if(cipher_din_oper == 1'b1) begin
+        // temp_data <-> cipher
+        cipher_din_valid = temp_valid;
+        temp_ready = cipher_din_ready;
+    end else begin
+        // temp_data <-> state machine
+        cipher_din_valid = 1'b0;
+        temp_ready = sm_temp_ready;
+    end
+end
+
 assign cipher_din[7:0]   = temp_data[31:24];
 assign cipher_din[15:8]  = temp_data[23:16];
 assign cipher_din[23:16] = temp_data[15:8];
 assign cipher_din[31:24] = temp_data[7:0];
 
-assign cipher_din_valid = temp_valid;
 assign cipher_din_last = temp_data_last;
 assign cipher_din_size = temp_data_size;
 
 assign cipher_inst = pdi_data[(G_PWIDTH-1):(G_PWIDTH-4)];
-
-always @(*) begin
-    if((pdi_valid == 1'b1) && reg_inst_enable == 1'b1) begin
-        cipher_inst_valid = 1'b1;
-    end else begin
-        cipher_inst_valid = 1'b0;
-    end
-end
-
-assign cipher_dout_ready = do_buffer_din_ready;
 
 subterranean_stream
 #(.ASYNC_RSTN(ASYNC_RSTN),
@@ -293,19 +316,16 @@ cipher
     .din_last(cipher_din_last),
     .din_valid(cipher_din_valid),
     .din_ready(cipher_din_ready),
-    .din_enable(cipher_din_enable),
     // Instruction bus
     .inst(cipher_inst),
     .inst_valid(cipher_inst_valid),
     .inst_ready(cipher_inst_ready),
-    .inst_enable(cipher_inst_enable),
     // Data out bus
     .dout(cipher_dout),
     .dout_size(cipher_dout_size),
     .dout_last(cipher_dout_last),
     .dout_valid(cipher_dout_valid),
-    .dout_ready(cipher_dout_ready),
-    .dout_enable(cipher_dout_enable)
+    .dout_ready(cipher_dout_ready)
 );
 
 always @(posedge clk) begin
@@ -347,7 +367,7 @@ always @(posedge clk) begin
 end
 
 always @(*) begin
-    if((pdi_valid == 1'b1) && reg_inst_enable == 1'b1) begin
+    if((cipher_inst_valid == 1'b1) && (cipher_inst_ready == 1'b1)) begin
         next_inst = pdi_data[31:28];
     end else begin
         next_inst = reg_inst;
@@ -366,6 +386,8 @@ always @(*) begin
     end
 end
 
+assign do_buffer_din_valid_and_ready = do_buffer_din_valid & do_buffer_din_ready;
+
 always @(*) begin
     case(do_buffer_din_type)
         // Status header for hash instruction
@@ -376,6 +398,7 @@ always @(*) begin
             do_buffer_din[15:0]  = G_HASH_SIZE_WORDS*4;
             do_buffer_din_valid  = 1'b1;
             do_buffer_din_last   = 1'b0;
+            cipher_dout_ready    = 1'b0;
         end
         // Status header for ciphertext/plaintext
         3'b010 : begin
@@ -386,6 +409,7 @@ always @(*) begin
                 do_buffer_din[G_SEGMENT_SIZE_BITS-1:0] = temp_data[G_SEGMENT_SIZE_BITS-1:0];
                 do_buffer_din_valid  = 1'b1;
                 do_buffer_din_last   = 1'b0;
+                cipher_dout_ready    = 1'b0;
             end else begin
                 do_buffer_din[31:28] = 4'b0100;
                 do_buffer_din[27:24] = {2'b00, temp_data[25], temp_data[25]};
@@ -393,6 +417,7 @@ always @(*) begin
                 do_buffer_din[G_SEGMENT_SIZE_BITS-1:0] = temp_data[G_SEGMENT_SIZE_BITS-1:0];
                 do_buffer_din_valid  = 1'b1;
                 do_buffer_din_last   = 1'b0;
+                cipher_dout_ready    = 1'b0;
             end
         end
         // Status header for tag
@@ -403,6 +428,7 @@ always @(*) begin
             do_buffer_din[15:0]  = G_TAG_SIZE_WORDS*4;
             do_buffer_din_valid  = 1'b1;
             do_buffer_din_last   = 1'b0;
+            cipher_dout_ready    = 1'b0;
         end
         // Status instruction for correct execution
         3'b101 : begin
@@ -412,6 +438,7 @@ always @(*) begin
             do_buffer_din[15:0]  = 16'h0000;
             do_buffer_din_valid  = 1'b1;
             do_buffer_din_last   = 1'b1;
+            cipher_dout_ready    = 1'b0;
         end
         // Status instruction for tag verification
         3'b110 : begin
@@ -421,11 +448,13 @@ always @(*) begin
             do_buffer_din[15:0]  = 16'h0000;
             do_buffer_din_valid  = cipher_dout_valid;
             do_buffer_din_last   = 1'b1;
+            cipher_dout_ready    = do_buffer_din_ready;
         end
         3'b111 : begin
             do_buffer_din = {32{1'b0}};
             do_buffer_din_valid = 1'b0;
             do_buffer_din_last  = 1'b0;
+            cipher_dout_ready    = 1'b0;
         end
         // Value comes from the cipher core
         default : begin
@@ -436,11 +465,14 @@ always @(*) begin
             do_buffer_din[7:0]   = cipher_dout[31:24];
             do_buffer_din_valid  = cipher_dout_valid;
             do_buffer_din_last   = cipher_dout_last;
+            cipher_dout_ready    = do_buffer_din_ready;
         end
     endcase
 end
 
 assign do_buffer_dout_ready = do_ready;
+
+assign do_valid_and_ready = do_buffer_dout_valid & do_ready;
 
 subterranean_lwc_buffer_out
 #(.G_WIDTH(G_PWIDTH)
@@ -448,6 +480,7 @@ subterranean_lwc_buffer_out
 do_buffer
 (
     .clk(clk),
+    .rst(do_buffer_rst),
     .din(do_buffer_din),
     .din_last(do_buffer_din_last),
     .din_valid(do_buffer_din_valid),
@@ -455,10 +488,7 @@ do_buffer
     .dout(do_buffer_dout),
     .dout_last(do_buffer_dout_last),
     .dout_valid(do_buffer_dout_valid),
-    .dout_ready(do_buffer_dout_ready),
-    .buffer_in_enable(do_buffer_in_enable),
-    .buffer_out_enable(do_buffer_out_enable),
-    .buffer_rst(do_buffer_rst)
+    .dout_ready(do_buffer_dout_ready)
 );
 
 subterranean_lwc_state_machine
@@ -469,31 +499,26 @@ state_machine
 (
     .clk(clk),
     .rst(rst),
-    .pdi_data(pdi_data),
+    .pdi_data(pdi_data[(G_PWIDTH-1):(G_PWIDTH-4)]),
     .pdi_valid_and_ready(pdi_valid_and_ready),
+    .pdi_oper(pdi_oper),
     .sm_pdi_ready(sm_pdi_ready),
-    .pdi_buffer_in_enable(pdi_buffer_in_enable),
-    .pdi_buffer_out_enable(pdi_buffer_out_enable),
     .pdi_buffer_rst(pdi_buffer_rst),
-    .sdi_data(sdi_data),
+    .sdi_data(sdi_data[(G_SWIDTH-1):(G_SWIDTH-4)]),
     .sdi_valid_and_ready(sdi_valid_and_ready),
+    .sdi_oper(sdi_oper),
     .sm_sdi_ready(sm_sdi_ready),
-    .sdi_buffer_in_enable(sdi_buffer_in_enable),
-    .sdi_buffer_out_enable(sdi_buffer_out_enable),
     .sdi_buffer_rst(sdi_buffer_rst),
     .reg_buffer_dout_size_enable(reg_buffer_dout_size_enable),
-    .temp_data(temp_data),
     .temp_valid_and_ready(temp_valid_and_ready),
     .temp_data_oper(temp_data_oper),
     .sm_temp_ready(sm_temp_ready),
+    .cipher_din_oper(cipher_din_oper),
     .cipher_din_ready(cipher_din_ready),
-    .cipher_din_enable(cipher_din_enable),
-    .cipher_inst_enable(cipher_inst_enable),
     .cipher_inst_ready(cipher_inst_ready),
     .cipher_dout_last(cipher_dout_last),
     .cipher_dout_valid(cipher_dout_valid),
     .cipher_dout_ready(cipher_dout_ready),
-    .cipher_dout_enable(cipher_dout_enable),
     .reg_data_size_oper(reg_data_size_oper),
     .is_reg_data_size_less_equal_four(is_reg_data_size_less_equal_four),
     .is_reg_data_size_load_zero(is_reg_data_size_load_zero),
@@ -501,11 +526,10 @@ state_machine
     .reg_inst_enable(reg_inst_enable),
     .reg_segment_end_of_type(reg_segment_end_of_type),
     .reg_segment_end_of_type_enable(reg_segment_end_of_type_enable),
-    .do_buffer_din_ready(do_buffer_din_ready),
-    .do_buffer_in_enable(do_buffer_in_enable),
-    .do_buffer_out_enable(do_buffer_out_enable),
+    .do_buffer_din_valid_and_ready(do_buffer_din_valid_and_ready),
     .do_buffer_rst(do_buffer_rst),
-    .do_buffer_din_type(do_buffer_din_type)
+    .do_buffer_din_type(do_buffer_din_type),
+    .do_valid_and_ready(do_valid_and_ready)
 );
 
 assign pdi_ready = int_pdi_ready;

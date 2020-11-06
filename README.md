@@ -29,7 +29,7 @@ The implementation done in Verilog and doesn't use any files provided by the LWC
 - *subterranean_rounds_simple_1.v, subterranean_rounds_simple_2.v, subterranean_rounds_simple_4.v*  
 	The basic simple version of Subterranean2.0, it can basically perform a duplex.
 	The number shows how many rounds it can execute per clock cycle.
-- *subterranean_rounds_simple_1_axi4_lite.v*
+- *subterranean_rounds_simple_1_axi4_lite.v*  
 	The basic version extended with a AXI4-Lite interface.
 	It is made as proof of concept for a HW/SW codesign of Subterranean2.0
 - *subterranean_stream.v, subterranean_stream_state_machine.v*  

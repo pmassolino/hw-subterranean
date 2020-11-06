@@ -16,7 +16,7 @@ skip_hash_test = 0, // 1 - True, 0 - False
 skip_aead_test = 0, // 1 - True, 0 - False
 test_memory_file_subterranean_hash = "../data_tests/LWC_HASH_KAT_256.txt",
 test_memory_file_subterranean_aead = "../data_tests/LWC_AEAD_KAT_128_128.txt",
-sim_enable_dump = 0 // 1 - True, 0 - False
+sim_enable_dump = 1 // 1 - True, 0 - False
 );
 
 reg [(MAXIMUM_BUFFER_SIZE - 1):0] test_input_key_enc;
@@ -821,6 +821,7 @@ if(sim_enable_dump == 1'b1) begin
     begin
         $dumpfile("dump");
         $dumpvars(1, tb_subterranean_rounds_simple_1_axi4_lite);
+        $dumpvars(1, tb_subterranean_rounds_simple_1_axi4_lite.test);
     end
 end
 endgenerate

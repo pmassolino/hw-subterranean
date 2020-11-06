@@ -1,0 +1,10 @@
+subterranean_round.v
+subterranean_rounds_simple_1.v
+subterranean_rounds_simple_2.v
+subterranean_rounds_simple_4.v
+subterranean_stream_state_machine.v
+subterranean_stream.v
+subterranean_lwc_buffer_in.v
+subterranean_lwc_buffer_out.v
+subterranean_lwc_state_machine.v
+subterranean_lwc.v

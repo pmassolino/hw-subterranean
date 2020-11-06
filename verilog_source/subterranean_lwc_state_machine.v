@@ -16,34 +16,29 @@ parameter G_SWIDTH = 32)
     input wire clk,
     input wire rst,
     // PDI bus buffer
-    input wire [(G_PWIDTH-1):0] pdi_data,
+    input wire [(G_PWIDTH-1):(G_PWIDTH-4)] pdi_data,
     input wire pdi_valid_and_ready,
+    output wire [1:0] pdi_oper,
     output wire sm_pdi_ready,
-    output wire pdi_buffer_in_enable,
-    output wire pdi_buffer_out_enable,
     output wire pdi_buffer_rst,
     // SDI bus buffer
-    input wire [(G_SWIDTH-1):0] sdi_data,
+    input wire [(G_SWIDTH-1):(G_SWIDTH-4)] sdi_data,
     input wire sdi_valid_and_ready,
+    output wire sdi_oper,
     output wire sm_sdi_ready,
-    output wire sdi_buffer_in_enable,
-    output wire sdi_buffer_out_enable,
     output wire sdi_buffer_rst,
     // temp data
     output wire reg_buffer_dout_size_enable,
-    input wire [31:0] temp_data,
     input wire temp_valid_and_ready,
     output wire [1:0] temp_data_oper,
     output wire sm_temp_ready,
     // Cipher core
+    output wire cipher_din_oper,
     input wire cipher_din_ready,
-    output wire cipher_din_enable,
     input wire cipher_inst_ready,
-    output wire cipher_inst_enable,
     input wire cipher_dout_last,
     input wire cipher_dout_valid,
     input wire cipher_dout_ready,
-    output wire cipher_dout_enable,
     // Data size counter
     output wire [1:0] reg_data_size_oper,
     input wire is_reg_data_size_less_equal_four,
@@ -55,33 +50,26 @@ parameter G_SWIDTH = 32)
     input wire reg_segment_end_of_type,
     output wire reg_segment_end_of_type_enable,
     // DO bus buffer
-    input wire do_buffer_din_ready,
-    output wire do_buffer_in_enable,
-    output wire do_buffer_out_enable,
+    input wire do_buffer_din_valid_and_ready,
     output wire do_buffer_rst,
-    output wire [2:0] do_buffer_din_type
+    output wire [2:0] do_buffer_din_type,
+    input wire do_valid_and_ready
 );
 
+reg [1:0] reg_pdi_oper, next_pdi_oper;
 reg reg_sm_pdi_ready, next_sm_pdi_ready;
-reg reg_pdi_buffer_in_enable, next_pdi_buffer_in_enable;
-reg reg_pdi_buffer_out_enable, next_pdi_buffer_out_enable;
 reg reg_pdi_buffer_rst, next_pdi_buffer_rst;
+reg reg_sdi_oper, next_sdi_oper;
 reg reg_sm_sdi_ready, next_sm_sdi_ready;
-reg reg_sdi_buffer_in_enable, next_sdi_buffer_in_enable;
-reg reg_sdi_buffer_out_enable, next_sdi_buffer_out_enable;
 reg reg_sdi_buffer_rst, next_sdi_buffer_rst;
 reg reg_reg_buffer_dout_size_enable, next_reg_buffer_dout_size_enable;
 reg [1:0] reg_temp_data_oper, next_temp_data_oper;
+reg reg_cipher_din_oper, next_cipher_din_oper;
 reg reg_sm_temp_ready, next_sm_temp_ready;
-reg reg_cipher_din_enable, next_cipher_din_enable;
 reg reg_cipher_inst_valid, next_cipher_inst_valid;
-reg reg_cipher_inst_enable, next_cipher_inst_enable;
-reg reg_cipher_dout_enable, next_cipher_dout_enable;
 reg [1:0] reg_reg_data_size_oper, next_reg_data_size_oper;
 reg reg_reg_inst_enable, next_reg_inst_enable;
 reg reg_reg_segment_end_of_type_enable, next_reg_segment_end_of_type_enable;
-reg reg_do_buffer_in_enable, next_do_buffer_in_enable;
-reg reg_do_buffer_out_enable, next_do_buffer_out_enable;
 reg reg_do_buffer_rst, next_do_buffer_rst;
 reg [2:0] reg_do_buffer_din_type, next_do_buffer_din_type;
 
@@ -105,48 +93,36 @@ generate
         always @(posedge clk or negedge rst) begin
             if (rst == 1'b0) begin
                 actual_state <= s_reset;
+                reg_pdi_oper <= 2'b00;
                 reg_sm_pdi_ready <= 1'b0;
-                reg_pdi_buffer_in_enable <= 1'b0;
-                reg_pdi_buffer_out_enable <= 1'b0;
                 reg_pdi_buffer_rst <= 1'b1;
+                reg_sdi_oper <= 1'b0;
                 reg_sm_sdi_ready <= 1'b0;
-                reg_sdi_buffer_in_enable <= 1'b0;
-                reg_sdi_buffer_out_enable <= 1'b0;
                 reg_sdi_buffer_rst <= 1'b1;
                 reg_reg_buffer_dout_size_enable <= 1'b0;
                 reg_sm_temp_ready <= 1'b0;
                 reg_temp_data_oper <= 2'b00;
-                reg_cipher_din_enable <= 1'b0;
-                reg_cipher_inst_enable <= 1'b0;
-                reg_cipher_dout_enable <= 1'b0;
+                reg_cipher_din_oper <= 1'b0;
                 reg_reg_data_size_oper <= 2'b00;
                 reg_reg_inst_enable <= 1'b0;
                 reg_reg_segment_end_of_type_enable <= 1'b0;
-                reg_do_buffer_in_enable <= 1'b0;
-                reg_do_buffer_out_enable <= 1'b0;
                 reg_do_buffer_rst <= 1'b1;
                 reg_do_buffer_din_type <= 3'b000;
             end else begin
                 actual_state <= next_state;
+                reg_pdi_oper <= next_pdi_oper;
                 reg_sm_pdi_ready <= next_sm_pdi_ready;
-                reg_pdi_buffer_in_enable <= next_pdi_buffer_in_enable;
-                reg_pdi_buffer_out_enable <= next_pdi_buffer_out_enable;
                 reg_pdi_buffer_rst <= next_pdi_buffer_rst;
+                reg_sdi_oper <= next_sdi_oper;
                 reg_sm_sdi_ready <= next_sm_sdi_ready;
-                reg_sdi_buffer_in_enable <= next_sdi_buffer_in_enable;
-                reg_sdi_buffer_out_enable <= next_sdi_buffer_out_enable;
                 reg_sdi_buffer_rst <= next_sdi_buffer_rst;
                 reg_reg_buffer_dout_size_enable <= next_reg_buffer_dout_size_enable;
                 reg_sm_temp_ready <= next_sm_temp_ready;
                 reg_temp_data_oper <= next_temp_data_oper;
-                reg_cipher_din_enable <= next_cipher_din_enable;
-                reg_cipher_inst_enable <= next_cipher_inst_enable;
-                reg_cipher_dout_enable <= next_cipher_dout_enable;
+                reg_cipher_din_oper <= next_cipher_din_oper;
                 reg_reg_data_size_oper <= next_reg_data_size_oper;
                 reg_reg_inst_enable <= next_reg_inst_enable;
                 reg_reg_segment_end_of_type_enable <= next_reg_segment_end_of_type_enable;
-                reg_do_buffer_in_enable <= next_do_buffer_in_enable;
-                reg_do_buffer_out_enable <= next_do_buffer_out_enable;
                 reg_do_buffer_rst <= next_do_buffer_rst;
                 reg_do_buffer_din_type <= next_do_buffer_din_type;
             end
@@ -155,48 +131,36 @@ generate
         always @(posedge clk) begin
             if (rst == 1'b1) begin
                 actual_state <= s_reset;
+                reg_pdi_oper <= 2'b00;
                 reg_sm_pdi_ready <= 1'b0;
-                reg_pdi_buffer_in_enable <= 1'b0;
-                reg_pdi_buffer_out_enable <= 1'b0;
                 reg_pdi_buffer_rst <= 1'b1;
+                reg_sdi_oper <= 1'b0;
                 reg_sm_sdi_ready <= 1'b0;
-                reg_sdi_buffer_in_enable <= 1'b0;
-                reg_sdi_buffer_out_enable <= 1'b0;
                 reg_sdi_buffer_rst <= 1'b1;
                 reg_reg_buffer_dout_size_enable <= 1'b0;
                 reg_sm_temp_ready <= 1'b0;
                 reg_temp_data_oper <= 2'b00;
-                reg_cipher_din_enable <= 1'b0;
-                reg_cipher_inst_enable <= 1'b0;
-                reg_cipher_dout_enable <= 1'b0;
+                reg_cipher_din_oper <= 1'b0;
                 reg_reg_data_size_oper <= 2'b00;
                 reg_reg_inst_enable <= 1'b0;
                 reg_reg_segment_end_of_type_enable <= 1'b0;
-                reg_do_buffer_in_enable <= 1'b0;
-                reg_do_buffer_out_enable <= 1'b0;
                 reg_do_buffer_rst <= 1'b1;
                 reg_do_buffer_din_type <= 3'b000;
             end else begin
                 actual_state <= next_state;
+                reg_pdi_oper <= next_pdi_oper;
                 reg_sm_pdi_ready <= next_sm_pdi_ready;
-                reg_pdi_buffer_in_enable <= next_pdi_buffer_in_enable;
-                reg_pdi_buffer_out_enable <= next_pdi_buffer_out_enable;
                 reg_pdi_buffer_rst <= next_pdi_buffer_rst;
+                reg_sdi_oper <= next_sdi_oper;
                 reg_sm_sdi_ready <= next_sm_sdi_ready;
-                reg_sdi_buffer_in_enable <= next_sdi_buffer_in_enable;
-                reg_sdi_buffer_out_enable <= next_sdi_buffer_out_enable;
                 reg_sdi_buffer_rst <= next_sdi_buffer_rst;
                 reg_reg_buffer_dout_size_enable <= next_reg_buffer_dout_size_enable;
                 reg_sm_temp_ready <= next_sm_temp_ready;
                 reg_temp_data_oper <= next_temp_data_oper;
-                reg_cipher_din_enable <= next_cipher_din_enable;
-                reg_cipher_inst_enable <= next_cipher_inst_enable;
-                reg_cipher_dout_enable <= next_cipher_dout_enable;
+                reg_cipher_din_oper <= next_cipher_din_oper;
                 reg_reg_data_size_oper <= next_reg_data_size_oper;
                 reg_reg_inst_enable <= next_reg_inst_enable;
                 reg_reg_segment_end_of_type_enable <= next_reg_segment_end_of_type_enable;
-                reg_do_buffer_in_enable <= next_do_buffer_in_enable;
-                reg_do_buffer_out_enable <= next_do_buffer_out_enable;
                 reg_do_buffer_rst <= next_do_buffer_rst;
                 reg_do_buffer_din_type <= next_do_buffer_din_type;
             end
@@ -205,25 +169,19 @@ generate
 endgenerate
 
 always @(*) begin
+    next_pdi_oper = 2'b00;
     next_sm_pdi_ready = 1'b0;
-    next_pdi_buffer_in_enable = 1'b0;
-    next_pdi_buffer_out_enable = 1'b0;
     next_pdi_buffer_rst = 1'b0;
+    next_sdi_oper = 1'b0;
     next_sm_sdi_ready = 1'b0;
-    next_sdi_buffer_in_enable = 1'b0;
-    next_sdi_buffer_out_enable = 1'b0;
     next_sdi_buffer_rst = 1'b0;
     next_reg_buffer_dout_size_enable = 1'b0;
     next_sm_temp_ready = 1'b0;
     next_temp_data_oper = 2'b00;
-    next_cipher_din_enable = 1'b0;
-    next_cipher_inst_enable = 1'b0;
-    next_cipher_dout_enable = 1'b0;
+    next_cipher_din_oper = 1'b0;
     next_reg_inst_enable = 1'b0;
     next_reg_data_size_oper = 2'b00;
     next_reg_segment_end_of_type_enable = 1'b0;
-    next_do_buffer_in_enable = 1'b0;
-    next_do_buffer_out_enable = 1'b0;
     next_do_buffer_rst = 1'b0;
     next_do_buffer_din_type = 3'b000;
     case(next_state)
@@ -233,9 +191,9 @@ always @(*) begin
             next_do_buffer_rst = 1'b1;
         end
         s_instruction : begin
-            next_cipher_inst_enable = 1'b1;
             next_reg_inst_enable = 1'b1;
             next_do_buffer_din_type = 3'b111;
+            next_pdi_oper = 2'b01;
             next_pdi_buffer_rst = 1'b1;
             next_sdi_buffer_rst = 1'b1;
             next_do_buffer_rst = 1'b1;
@@ -248,8 +206,7 @@ always @(*) begin
         end
         // Receive key header on SDI
         s_key_1 : begin
-            next_sdi_buffer_in_enable = 1'b1;
-            next_sdi_buffer_out_enable = 1'b1;
+            next_sdi_oper = 1'b1;
             next_sm_temp_ready = 1'b1;
             next_temp_data_oper = 2'b11;
             next_reg_data_size_oper = 2'b01;
@@ -258,7 +215,6 @@ always @(*) begin
         end
         // Store key header and decide how to procceed
         s_key_2 : begin
-            next_sdi_buffer_out_enable = 1'b1;
             next_reg_buffer_dout_size_enable = 1'b1;
             next_temp_data_oper = 2'b11;
             next_sm_temp_ready = 1'b1;
@@ -268,37 +224,32 @@ always @(*) begin
         end
         // Process key until the end
         s_key_3 : begin
-            next_sdi_buffer_in_enable = 1'b1;
-            next_sdi_buffer_out_enable = 1'b1;
+            next_sdi_oper = 1'b1;
             next_reg_buffer_dout_size_enable = 1'b1;
             next_temp_data_oper = 2'b11;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_cipher_dout_enable = 1'b1;
             next_do_buffer_din_type = 3'b111;
         end
         // Process last key
         s_key_4 : begin
-            next_sdi_buffer_out_enable = 1'b1;
+            next_sdi_oper = 1'b1;
             next_temp_data_oper = 2'b11;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_cipher_dout_enable = 1'b1;
             next_do_buffer_din_type = 3'b111;
         end
         // Insert empty data block
         s_key_5 : begin
             next_sdi_buffer_rst = 1'b1;
             next_temp_data_oper = 2'b01;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_cipher_dout_enable = 1'b1;
             next_do_buffer_din_type = 3'b111;
         end
         // Receive nonce header on PDI
         s_enc_dec_0 : begin
-            next_pdi_buffer_in_enable = 1'b1;
-            next_pdi_buffer_out_enable = 1'b1;
+            next_pdi_oper = 2'b10;
             next_sm_temp_ready = 1'b1;
             next_temp_data_oper = 2'b10;
             next_reg_data_size_oper = 2'b01;
@@ -307,7 +258,6 @@ always @(*) begin
         end
         // Store nonce header and decide how to procceed
         s_enc_dec_1 : begin
-            next_pdi_buffer_out_enable = 1'b1;
             next_reg_buffer_dout_size_enable = 1'b1;
             next_temp_data_oper = 2'b10;
             next_sm_temp_ready = 1'b1;
@@ -317,36 +267,30 @@ always @(*) begin
         end
         // Process nonce until the end
         s_enc_dec_2 : begin
-            next_pdi_buffer_in_enable = 1'b1;
-            next_pdi_buffer_out_enable = 1'b1;
+            next_pdi_oper = 2'b10;
             next_reg_buffer_dout_size_enable = 1'b1;
             next_temp_data_oper = 2'b10;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_cipher_dout_enable = 1'b1;
             next_do_buffer_din_type = 3'b111;
         end
         // Process last nonce
         s_enc_dec_3 : begin
-            next_pdi_buffer_out_enable = 1'b1;
             next_temp_data_oper = 2'b10;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_cipher_dout_enable = 1'b1;
             next_do_buffer_din_type = 3'b111;
         end
         // Insert empty data block
         s_enc_dec_4 : begin
             next_temp_data_oper = 2'b01;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_cipher_dout_enable = 1'b1;
             next_do_buffer_din_type = 3'b111;
         end
         // Receive associated data header on PDI
         s_enc_dec_5 : begin
-            next_pdi_buffer_in_enable = 1'b1;
-            next_pdi_buffer_out_enable = 1'b1;
+            next_pdi_oper = 2'b10;
             next_sm_temp_ready = 1'b1;
             next_temp_data_oper = 2'b10;
             next_reg_data_size_oper = 2'b01;
@@ -355,7 +299,6 @@ always @(*) begin
         end
         // Store associated data header and decide how to procceed
         s_enc_dec_6 : begin
-            next_pdi_buffer_out_enable = 1'b1;
             next_reg_buffer_dout_size_enable = 1'b1;
             next_temp_data_oper = 2'b10;
             next_sm_temp_ready = 1'b1;
@@ -365,36 +308,30 @@ always @(*) begin
         end
         // Process associated data until the end
         s_enc_dec_7 : begin
-            next_pdi_buffer_in_enable = 1'b1;
-            next_pdi_buffer_out_enable = 1'b1;
+            next_pdi_oper = 2'b10;
             next_reg_buffer_dout_size_enable = 1'b1;
             next_temp_data_oper = 2'b10;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_cipher_dout_enable = 1'b1;
             next_do_buffer_din_type = 3'b111;
         end
         // Process last associated data
         s_enc_dec_8 : begin
-            next_pdi_buffer_out_enable = 1'b1;
             next_temp_data_oper = 2'b10;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_cipher_dout_enable = 1'b1;
             next_do_buffer_din_type = 3'b111;
         end
         // Insert empty data block
         s_enc_dec_9 : begin
             next_temp_data_oper = 2'b01;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_cipher_dout_enable = 1'b1;
             next_do_buffer_din_type = 3'b111;
         end
         // Receive plaintext/ciphertext header on PDI
         s_enc_dec_10 : begin
-            next_pdi_buffer_in_enable = 1'b1;
-            next_pdi_buffer_out_enable = 1'b1;
+            next_pdi_oper = 2'b10;
             next_sm_temp_ready = 1'b1;
             next_temp_data_oper = 2'b10;
             next_reg_data_size_oper = 2'b01;
@@ -403,161 +340,115 @@ always @(*) begin
         end
         // Send plaintext/ciphertext header
         s_enc_dec_11 : begin
-            next_pdi_buffer_out_enable = 1'b1;
             next_reg_buffer_dout_size_enable = 1'b1;
             next_temp_data_oper = 2'b10;
             next_sm_temp_ready = 1'b1;
             next_reg_data_size_oper = 2'b01;
             next_reg_segment_end_of_type_enable = 1'b1;
             next_do_buffer_din_type = 3'b010;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Process plaintext/ciphertext until the end
         s_enc_dec_12 : begin
-            next_pdi_buffer_in_enable = 1'b1;
-            next_pdi_buffer_out_enable = 1'b1;
+            next_pdi_oper = 2'b10;
             next_reg_buffer_dout_size_enable = 1'b1;
             next_temp_data_oper = 2'b10;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_cipher_dout_enable = 1'b1;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Process last plaintext/ciphertext
         s_enc_dec_13 : begin
-            next_pdi_buffer_out_enable = 1'b1;
             next_temp_data_oper = 2'b10;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_cipher_dout_enable = 1'b1;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Insert empty data block
         s_enc_dec_14 : begin
             next_temp_data_oper = 2'b01;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_cipher_dout_enable = 1'b1;
             next_do_buffer_din_type = 3'b111;
         end
         // Split into tag generatation or tag verification
         s_enc_dec_15 : begin
             next_temp_data_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_cipher_dout_enable = 1'b1;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Send tag header
         s_enc_16 : begin
             next_do_buffer_din_type = 3'b100;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Generate tag
         s_enc_17 : begin
-            next_cipher_dout_enable = 1'b1;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Send correct execution message
         s_enc_18 : begin
             next_do_buffer_din_type = 3'b101;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Wait to receive correct execution message 
         s_enc_19 : begin
             next_do_buffer_din_type = 3'b111;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Receive tag header on PDI
         s_dec_16 : begin
-            next_pdi_buffer_in_enable = 1'b1;
-            next_pdi_buffer_out_enable = 1'b1;
+            next_pdi_oper = 2'b10;
             next_sm_temp_ready = 1'b1;
             next_temp_data_oper = 2'b10;
             next_reg_data_size_oper = 2'b01;
             next_reg_segment_end_of_type_enable = 1'b1;
             next_do_buffer_din_type = 3'b111;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Store tag header and decide how to procceed
         s_dec_17 : begin
-            next_pdi_buffer_out_enable = 1'b1;
             next_reg_buffer_dout_size_enable = 1'b1;
             next_temp_data_oper = 2'b10;
             next_sm_temp_ready = 1'b1;
             next_reg_data_size_oper = 2'b01;
             next_reg_segment_end_of_type_enable = 1'b1;
             next_do_buffer_din_type = 3'b111;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Process tag until the end
         s_dec_18 : begin
-            next_pdi_buffer_in_enable = 1'b1;
-            next_pdi_buffer_out_enable = 1'b1;
+            next_pdi_oper = 2'b10;
             next_reg_buffer_dout_size_enable = 1'b1;
             next_temp_data_oper = 2'b10;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Process last tag
         s_dec_19 : begin
-            next_pdi_buffer_out_enable = 1'b1;
             next_temp_data_oper = 2'b10;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_cipher_dout_enable = 1'b1;
             next_do_buffer_din_type = 3'b111;
         end
         // Insert empty data block
         s_dec_20 : begin
             next_pdi_buffer_rst = 1'b1;
             next_temp_data_oper = 2'b01;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Send verification message
         s_dec_21 : begin
-            next_cipher_dout_enable = 1'b1;
             next_do_buffer_din_type = 3'b110;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Wait to receive correct execution message 
         s_dec_22 : begin
             next_do_buffer_din_type = 3'b111;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Send hash header
         s_hash_0 : begin
             next_do_buffer_din_type = 3'b001;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Receive the hash header
         s_hash_1 : begin
-            next_pdi_buffer_in_enable = 1'b1;
-            next_pdi_buffer_out_enable = 1'b1;
+            next_pdi_oper = 2'b10;
             next_sm_temp_ready = 1'b1;
             next_temp_data_oper = 2'b10;
             next_reg_data_size_oper = 2'b01;
             next_reg_segment_end_of_type_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Store hash header and decide how to procceed
         s_hash_2 : begin
-            next_pdi_buffer_out_enable = 1'b1;
             next_reg_buffer_dout_size_enable = 1'b1;
             next_temp_data_oper = 2'b10;
             next_sm_temp_ready = 1'b1;
@@ -567,47 +458,35 @@ always @(*) begin
         end
         // Process data until the end
         s_hash_3 : begin
-            next_pdi_buffer_in_enable = 1'b1;
-            next_pdi_buffer_out_enable = 1'b1;
+            next_pdi_oper = 2'b10;
             next_reg_buffer_dout_size_enable = 1'b1;
             next_temp_data_oper = 2'b10;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Process last data
         s_hash_4 : begin
-            next_pdi_buffer_out_enable = 1'b1;
+            next_pdi_oper = 2'b10;
             next_temp_data_oper = 2'b10;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Insert empty data block
         s_hash_5 : begin
-            next_pdi_buffer_rst = 1'b1;
             next_temp_data_oper = 2'b01;
+            next_cipher_din_oper = 1'b1;
             next_reg_data_size_oper = 2'b10;
-            next_cipher_din_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Generate hash
         s_hash_6 : begin
-            next_cipher_dout_enable = 1'b1;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Send correct execution message
         s_hash_7 : begin
             next_do_buffer_din_type = 3'b101;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         // Wait to receive correct execution message 
         s_hash_8 : begin
             next_do_buffer_din_type = 3'b111;
-            next_do_buffer_in_enable = 1'b1;
-            next_do_buffer_out_enable = 1'b1;
         end
         default : begin
             ;
@@ -833,7 +712,7 @@ always @(*) begin
         end
         // Wait sending last plaintext/ciphertext and split into tag generatation or tag verification
         s_enc_dec_15 : begin
-            if((cipher_dout_valid == 1'b1) && (cipher_dout_ready == 1'b1)) begin
+            if((cipher_dout_valid == 1'b1) && (cipher_dout_ready == 1'b1)  && (cipher_dout_last == 1'b1)) begin
                 if(reg_segment_end_of_type == 1'b1) begin
                     if(reg_inst == LWC_API_INSTRUCTION_AUTHENTICATED_ENCRYPTION) begin
                         next_state = s_enc_16;
@@ -849,7 +728,7 @@ always @(*) begin
         end
         // Send tag header
         s_enc_16 : begin
-            if(do_buffer_din_ready == 1'b1) begin
+            if(do_buffer_din_valid_and_ready == 1'b1) begin
                 next_state = s_enc_17;
             end else begin
                 next_state = s_enc_16;
@@ -865,7 +744,7 @@ always @(*) begin
         end
         // Send correct execution message
         s_enc_18 : begin
-            if(do_buffer_din_ready == 1'b1) begin
+            if(do_buffer_din_valid_and_ready == 1'b1) begin
                 next_state = s_enc_19;
             end else begin
                 next_state = s_enc_18;
@@ -873,7 +752,7 @@ always @(*) begin
         end
         // Wait to receive correct execution message 
         s_enc_19 : begin
-            if(do_buffer_din_ready == 1'b1) begin
+            if(do_valid_and_ready == 1'b1) begin
                 next_state = s_reset;
             end else begin
                 next_state = s_enc_19;
@@ -921,7 +800,7 @@ always @(*) begin
         end
         // Send correct execution message
         s_dec_21 : begin
-            if(do_buffer_din_ready == 1'b1) begin
+            if(do_buffer_din_valid_and_ready == 1'b1) begin
                 next_state = s_dec_22;
             end else begin
                 next_state = s_dec_21;
@@ -929,7 +808,7 @@ always @(*) begin
         end
         // Wait to receive correct execution message 
         s_dec_22 : begin
-            if(do_buffer_din_ready == 1'b1) begin
+            if(do_valid_and_ready == 1'b1) begin
                 next_state = s_reset;
             end else begin
                 next_state = s_dec_22;
@@ -937,7 +816,7 @@ always @(*) begin
         end
         // Send hash header
         s_hash_0 : begin
-            if(do_buffer_din_ready == 1'b1) begin
+            if(do_buffer_din_valid_and_ready == 1'b1) begin
                 next_state = s_hash_1;
             end else begin
                 next_state = s_hash_0;
@@ -953,7 +832,7 @@ always @(*) begin
         end
         // Store hash header and decide how to procceed
         s_hash_2 : begin
-            if(is_reg_data_size_load_zero == 1'b1) begin
+            if (is_reg_data_size_load_zero == 1'b1) begin 
                 next_state = s_hash_5;
             end else begin
                 next_state = s_hash_3;
@@ -997,7 +876,7 @@ always @(*) begin
         end
         // Send correct execution message
         s_hash_7 : begin
-            if(do_buffer_din_ready == 1'b1) begin
+            if(do_buffer_din_valid_and_ready == 1'b1) begin
                 next_state = s_hash_8;
             end else begin
                 next_state = s_hash_7;
@@ -1005,7 +884,7 @@ always @(*) begin
         end
         // Wait to receive correct execution message 
         s_hash_8 : begin
-            if(do_buffer_din_ready == 1'b1) begin
+            if(do_valid_and_ready == 1'b1) begin
                 next_state = s_reset;
             end else begin
                 next_state = s_hash_8;
@@ -1017,25 +896,19 @@ always @(*) begin
     endcase
 end
 
+assign pdi_oper = reg_pdi_oper;
 assign sm_pdi_ready = reg_sm_pdi_ready;
-assign pdi_buffer_in_enable = reg_pdi_buffer_in_enable;
-assign pdi_buffer_out_enable = reg_pdi_buffer_out_enable;
 assign pdi_buffer_rst = reg_pdi_buffer_rst;
+assign sdi_oper = reg_sdi_oper;
 assign sm_sdi_ready = reg_sm_sdi_ready;
-assign sdi_buffer_in_enable = reg_sdi_buffer_in_enable;
-assign sdi_buffer_out_enable = reg_sdi_buffer_out_enable;
 assign sdi_buffer_rst = reg_sdi_buffer_rst;
 assign reg_buffer_dout_size_enable = reg_reg_buffer_dout_size_enable;
 assign temp_data_oper = reg_temp_data_oper;
+assign cipher_din_oper = reg_cipher_din_oper;
 assign sm_temp_ready = reg_sm_temp_ready;
-assign cipher_din_enable = reg_cipher_din_enable;
-assign cipher_inst_enable = reg_cipher_inst_enable;
-assign cipher_dout_enable = reg_cipher_dout_enable;
 assign reg_data_size_oper = reg_reg_data_size_oper;
 assign reg_inst_enable = reg_reg_inst_enable;
 assign reg_segment_end_of_type_enable = reg_reg_segment_end_of_type_enable;
-assign do_buffer_in_enable = reg_do_buffer_in_enable;
-assign do_buffer_out_enable = reg_do_buffer_out_enable;
 assign do_buffer_rst = reg_do_buffer_rst;
 assign do_buffer_din_type = reg_do_buffer_din_type;
 
