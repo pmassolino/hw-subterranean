@@ -81,6 +81,8 @@ wire [2:0] p_core_dout_size;
 wire p_core_dout_valid;
 reg p_core_dout_ready;
 
+reg reg_p_core_dout_last, next_p_core_dout_last;
+
 wire [2:0] reg_dout_oper;
 
 reg [31:0] reg_compare_tag, next_compare_tag;
@@ -358,6 +360,22 @@ p_core
 );
 
 always @(posedge clk) begin
+    reg_p_core_dout_last <= next_p_core_dout_last;
+end
+
+always @(*) begin
+    if(reg_buffer_rst == 1'b1) begin
+        next_p_core_dout_last = 1'b0;
+    end else begin
+        if((p_core_din_valid_and_ready == 1'b1)) begin
+            next_p_core_dout_last = reg_buffer_last;
+        end else begin
+            next_p_core_dout_last = reg_p_core_dout_last;
+        end
+    end
+end
+
+always @(posedge clk) begin
     reg_ctr_data <= next_ctr_data;
 end
 
@@ -406,7 +424,7 @@ always @(*) begin
         3'b001 : begin
             int_dout = p_core_dout;
             int_dout_size = p_core_dout_size;
-            int_dout_last = reg_buffer_last;
+            int_dout_last = reg_p_core_dout_last;
             int_dout_valid = p_core_dout_valid;
             p_core_dout_ready = dout_ready;
         end
