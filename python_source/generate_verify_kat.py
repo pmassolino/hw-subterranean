@@ -12,7 +12,7 @@ def init_buffer(number_bytes):
     return value
     
 def generate_hash_test(test_file_name = "LWC_HASH_KAT_256_p.txt", number_of_tests = 1024, hash_size_bytes = 32):
-    out_file = open(test_file_name, 'w')
+    out_file = open(test_file_name, 'w', newline='\n')
     messages = init_buffer(number_of_tests)
     for count in range(number_of_tests+1):
         hash_out = crypto_hash(messages[:count], hash_size_bytes)
@@ -23,7 +23,7 @@ def generate_hash_test(test_file_name = "LWC_HASH_KAT_256_p.txt", number_of_test
     out_file.close()
 
 def verify_hash_test(test_file_name = "LWC_HASH_KAT_256_p.txt", hash_size_bytes = 32):
-    read_file = open(test_file_name, 'r')
+    read_file = open(test_file_name, 'r', newline='\n')
     current_line = read_file.readline()
     while(current_line != ''):
         count_str = (current_line.split('=')[1]).strip()
@@ -47,7 +47,7 @@ def verify_hash_test(test_file_name = "LWC_HASH_KAT_256_p.txt", hash_size_bytes 
     read_file.close()
 
 def generate_aead_test(test_file_name = "LWC_AEAD_KAT_128_128_p.txt", number_of_tests_m = 32, number_of_tests_ad = 32, tag_bytes = 16, nonce_bytes = 16, key_bytes = 16):
-    out_file = open(test_file_name, 'w')
+    out_file = open(test_file_name, 'w', newline='\n')
     messages = init_buffer(number_of_tests_m)
     associated_datas = init_buffer(number_of_tests_ad)
     nonce = init_buffer(nonce_bytes)
@@ -67,7 +67,7 @@ def generate_aead_test(test_file_name = "LWC_AEAD_KAT_128_128_p.txt", number_of_
     out_file.close()
 
 def verify_aead_test(test_file_name = "LWC_AEAD_KAT_128_128_p.txt", tag_bytes = 16):
-    read_file = open(test_file_name, 'r')
+    read_file = open(test_file_name, 'r', newline='\n')
     current_line = read_file.readline()
     while(current_line != ''):
         count_str = (current_line.split('=')[1]).strip()

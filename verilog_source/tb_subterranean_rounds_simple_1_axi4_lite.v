@@ -531,10 +531,10 @@ initial begin
             read_until_get_character(hash_file, "=");
             read_ignore_character(hash_file, " ", temp_text1);
             pt_size = 0;
-            while(temp_text1 != "\n") begin
+            while((temp_text1 != "\n") && (temp_text1 != 13)) begin
                 decode_hex_character(temp_text1, test_input_pt_enc[7:4]);
                 temp_text1 = $fgetc(hash_file);
-                if(temp_text1 != "\n") begin
+                if((temp_text1 != "\n") && (temp_text1 != 13)) begin
                     decode_hex_character(temp_text1, test_input_pt_enc[3:0]);
                     temp_text1 = $fgetc(hash_file);
                 end
@@ -552,10 +552,10 @@ initial begin
             // Read MD
             read_until_get_character(hash_file, "=");
             read_ignore_character(hash_file, " ", temp_text1);
-            while(temp_text1 != "\n") begin
+            while((temp_text1 != "\n") && (temp_text1 != 13)) begin
                 decode_hex_character(temp_text1, true_output_ct_enc[7:4]);
                 temp_text1 = $fgetc(hash_file);
-                if(temp_text1 != "\n") begin
+                if((temp_text1 != "\n") && (temp_text1 != 13)) begin
                     decode_hex_character(temp_text1, true_output_ct_enc[3:0]);
                     temp_text1 = $fgetc(hash_file);
                 end
@@ -617,10 +617,10 @@ initial begin
             read_until_get_character(aead_file, "=");
             read_ignore_character(aead_file, " ", temp_text1);
             key_size = 0;
-            while(temp_text1 != "\n") begin
+            while((temp_text1 != "\n") && (temp_text1 != 13)) begin
                 decode_hex_character(temp_text1, test_input_key_enc[7:4]);
                 temp_text1 = $fgetc(aead_file);
-                if(temp_text1 != "\n") begin
+                if((temp_text1 != "\n") && (temp_text1 != 13)) begin
                     decode_hex_character(temp_text1, test_input_key_enc[3:0]);
                     temp_text1 = $fgetc(aead_file);
                 end
@@ -631,10 +631,10 @@ initial begin
             read_until_get_character(aead_file, "=");
             read_ignore_character(aead_file, " ", temp_text1);
             nonce_size = 0;
-            while(temp_text1 != "\n") begin
+            while((temp_text1 != "\n") && (temp_text1 != 13)) begin
                 decode_hex_character(temp_text1, test_input_nonce_enc[7:4]);
                 temp_text1 = $fgetc(aead_file);
-                if(temp_text1 != "\n") begin
+                if((temp_text1 != "\n") && (temp_text1 != 13)) begin
                     decode_hex_character(temp_text1, test_input_nonce_enc[3:0]);
                     temp_text1 = $fgetc(aead_file);
                 end
@@ -645,10 +645,10 @@ initial begin
             read_until_get_character(aead_file, "=");
             read_ignore_character(aead_file, " ", temp_text1);
             pt_size = 0;
-            while(temp_text1 != "\n") begin
+            while((temp_text1 != "\n") && (temp_text1 != 13)) begin
                 decode_hex_character(temp_text1, test_input_pt_enc[7:4]);
                 temp_text1 = $fgetc(aead_file);
-                if(temp_text1 != "\n") begin
+                if((temp_text1 != "\n") && (temp_text1 != 13)) begin
                     decode_hex_character(temp_text1, test_input_pt_enc[3:0]);
                     temp_text1 = $fgetc(aead_file);
                 end
@@ -668,10 +668,10 @@ initial begin
             read_until_get_character(aead_file, "=");
             read_ignore_character(aead_file, " ", temp_text1);
             ad_size = 0;
-            while(temp_text1 != "\n") begin
+            while((temp_text1 != "\n") && (temp_text1 != 13)) begin
                 decode_hex_character(temp_text1, test_input_ad_enc[7:4]);
                 temp_text1 = $fgetc(aead_file);
-                if(temp_text1 != "\n") begin
+                if((temp_text1 != "\n") && (temp_text1 != 13)) begin
                     decode_hex_character(temp_text1, test_input_ad_enc[3:0]);
                     temp_text1 = $fgetc(aead_file);
                 end
@@ -690,10 +690,10 @@ initial begin
             read_until_get_character(aead_file, "=");
             read_ignore_character(aead_file, " ", temp_text1);
             ct_size = 0;
-            while(temp_text1 != "\n") begin
+            while((temp_text1 != "\n") && (temp_text1 != 13)) begin
                 decode_hex_character(temp_text1, true_output_ct_enc[7:4]);
                 temp_text1 = $fgetc(aead_file);
-                if(temp_text1 != "\n") begin
+                if((temp_text1 != "\n") && (temp_text1 != 13)) begin
                     decode_hex_character(temp_text1, true_output_ct_enc[3:0]);
                     temp_text1 = $fgetc(aead_file);
                 end
